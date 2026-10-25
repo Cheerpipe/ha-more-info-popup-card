@@ -309,3 +309,137 @@ export class CommandQueue {
     void this._next();
   }
 }
+
+export type VolumeDirection = "up" | "down";
+
+export type VolumeEvent =
+  /** One volume step: a tap, a swipe step or a repeat while held. */
+  | {
+      type: "step";
+      direction: VolumeDirection;
+      source: "tap" | "swipe" | "repeat";
+    }
+  /** The volume is moving that way (swipe or hold), or stopped (`null`). */
+  | { type: "moving"; direction: VolumeDirection | null };
+
+export interface VolumeOptions {
+  /** Swipe distance of one step (px). */
+  step: number;
+  /** Movement below this is still a tap (px). */
+  slop: number;
+  /** Hold of a key, and stillness after a swipe, before repeating (ms). */
+  holdMs: number;
+  repeatMs: number;
+}
+
+export const VOLUME_DEFAULTS: VolumeOptions = {
+  step: 18,
+  slop: 10,
+  holdMs: 500,
+  repeatMs: 180,
+};
+
+/**
+ * One finger on the volume pill. A tap on + or − is one step (sent on
+ * release, so a swipe doesn't start with a stray one), holding it repeats,
+ * and a vertical swipe anywhere on the pill sends a step every `step` pixels,
+ * then keeps going while the finger stays still. There is no level to show
+ * (the remote only steps the volume), so the pill reports which way the
+ * volume is moving instead.
+ */
+export class VolumeTracker {
+  private readonly _opts: VolumeOptions;
+  private _half?: VolumeDirection;
+  private _startY = 0;
+  private _anchorY = 0;
+  private _stillY = 0;
+  private _swiping = false;
+  private _repeated = false;
+  private _moving: VolumeDirection | null = null;
+  private _last?: VolumeDirection;
+  private _timer?: ReturnType<typeof setTimeout>;
+
+  public constructor(
+    private readonly _emit: (event: VolumeEvent) => void,
+    options: Partial<VolumeOptions> = {},
+  ) {
+    this._opts = { ...VOLUME_DEFAULTS, ...options };
+  }
+
+  public get active(): boolean {
+    return this._half !== undefined;
+  }
+
+  /** `half`: the key under the finger. */
+  public down(half: VolumeDirection, y: number): void {
+    this.cancel();
+    this._half = half;
+    this._startY = y;
+    this._anchorY = y;
+    this._timer = setTimeout(() => this._repeat(half), this._opts.holdMs);
+  }
+
+  public move(y: number): void {
+    if (!this._half) return;
+    const { step, slop, holdMs } = this._opts;
+    if (!this._swiping) {
+      if (Math.abs(y - this._startY) < slop) return;
+      this._swiping = true;
+      this._anchorY = y;
+      this._stillY = y;
+      this._stop();
+    }
+    while (Math.abs(y - this._anchorY) >= step) {
+      const direction: VolumeDirection = y < this._anchorY ? "up" : "down";
+      this._anchorY += direction === "up" ? -step : step;
+      this._last = direction;
+      this._setMoving(direction);
+      this._emit({ type: "step", direction, source: "swipe" });
+    }
+    // A finger that stays put after a swipe keeps the volume moving.
+    if (this._last && Math.abs(y - this._stillY) > slop / 2) {
+      this._stillY = y;
+      this._stop();
+      const direction = this._last;
+      this._setMoving(direction);
+      this._timer = setTimeout(() => this._repeat(direction), holdMs);
+    }
+  }
+
+  public up(): void {
+    if (!this._half) return;
+    const tap = !this._swiping && !this._repeated ? this._half : undefined;
+    this.cancel();
+    if (tap) this._emit({ type: "step", direction: tap, source: "tap" });
+  }
+
+  public cancel(): void {
+    this._stop();
+    this._half = undefined;
+    this._swiping = false;
+    this._repeated = false;
+    this._last = undefined;
+    this._setMoving(null);
+  }
+
+  private _repeat(direction: VolumeDirection) {
+    this._repeated = true;
+    this._setMoving(direction);
+    this._emit({ type: "step", direction, source: "repeat" });
+    this._timer = setTimeout(
+      () => this._repeat(direction),
+      this._opts.repeatMs,
+    );
+  }
+
+  private _stop() {
+    clearTimeout(this._timer);
+    this._timer = undefined;
+  }
+
+  private _setMoving(direction: VolumeDirection | null) {
+    if (direction === this._moving) return;
+    this._moving = direction;
+    this._emit({ type: "moving", direction });
+  }
+}

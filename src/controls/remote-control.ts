@@ -9,6 +9,8 @@ import { css, html, LitElement, nothing, svg } from "lit";
 import { property, state } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
 import { styleMap } from "lit/directives/style-map.js";
+import { adjustForTheme, artColor, rgbCss, type Rgb } from "../ha/art-color";
+import { computeCssColor } from "../ha/color";
 import { computeStateName } from "../ha/entity";
 import { fireEvent } from "../ha/fire-event";
 import type { HassEntity, HomeAssistant } from "../ha/types";
@@ -20,13 +22,28 @@ import {
   type Direction,
   type PadEvent,
   type RemoteCommand,
+  type VolumeDirection,
+  type VolumeEvent,
+  VolumeTracker,
 } from "./remote-gestures";
+import { formatMediaTime, mediaPosition } from "./media-time";
 import { remoteProfile, type RemoteKey } from "./remote-profiles";
 
 export const REMOTE_CONTROL_TAG = "more-info-popup-remote-control";
 
 /** `MediaPlayerEntityFeature` (`src/data/media-player.ts`). */
+const SEEK = 2;
 const VOLUME_MUTE = 8;
+
+/** Arrow keys on the seek slider jump this much (s). */
+const SEEK_KEY_STEP = 10;
+
+/**
+ * `seek_color` of the seek slider: `theme` (the primary color, like the
+ * native slider), `art` (the dominant color of the cover) or any color.
+ */
+export type SeekColor = "theme" | "art" | (string & {});
+
 const MEDIA_OFF_STATES = ["off", "standby", "unavailable", "unknown"];
 
 /** Pause between the presses of one call with `num_repeats` (s). */
@@ -76,9 +93,11 @@ const capturePointer = (ev: PointerEvent) => {
 
 interface ButtonSpec {
   key: RemoteKey;
-  /** Repeats while held (volume) instead of a long press. */
-  repeat?: boolean;
 }
+
+/** Stretch of the volume pill while the volume moves, and per step. */
+const PILL_STRETCH = 1.06;
+const PILL_BUMP = 1.1;
 
 export class MoreInfoRemoteControl extends LitElement {
   @property({ attribute: false }) accessor hass: HomeAssistant | undefined;
@@ -93,6 +112,19 @@ export class MoreInfoRemoteControl extends LitElement {
   @property({ attribute: false }) accessor showNowPlaying = true;
 
   @property({ attribute: false }) accessor haptics = true;
+
+  @property({ attribute: false }) accessor seekColor: SeekColor = "theme";
+
+  /** Seek slider being dragged: the position under the finger (s). */
+  @state() accessor _seekDrag: number | undefined;
+
+  /** Dominant color of the cover, for `seek_color: art`. */
+  @state() accessor _artRgb: Rgb | undefined;
+
+  private _artUrl?: string;
+
+  /** Redraws the seek position every second while playing. */
+  private _ticker?: ReturnType<typeof setInterval>;
 
   /** Ring direction lit by the last press. */
   @state() accessor _flash: Direction | undefined;
@@ -114,13 +146,70 @@ export class MoreInfoRemoteControl extends LitElement {
     this._padEvent(event),
   );
 
+  private readonly _volume = new VolumeTracker((event) =>
+    this._volumeEvent(event),
+  );
+
+  /** Which way a swipe or a held key moves the volume (pill stretched). */
+  @state() accessor _volumeMoving: VolumeDirection | null = null;
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this._stopTicker();
     this._tracker.cancel();
+    this._volume.cancel();
     this._queue.clear();
     this._releaseButton();
     clearTimeout(this._flashTimer);
     clearTimeout(this._tapTimer);
+  }
+
+  protected override willUpdate(): void {
+    const media = this._mediaObj;
+    const url =
+      this.seekColor === "art" && media && !this._off(media)
+        ? (media.attributes.entity_picture as string | undefined)
+        : undefined;
+    if (url !== this._artUrl) {
+      this._artUrl = url;
+      this._artRgb = undefined;
+      if (url) {
+        artColor(url).then((rgb) => {
+          if (this._artUrl === url) this._artRgb = rgb;
+        });
+      }
+    }
+  }
+
+  protected override updated(): void {
+    const media = this._mediaObj;
+    const ticking =
+      this.isConnected &&
+      media?.state === "playing" &&
+      this._seekable(media) &&
+      this._seekDrag === undefined;
+    if (ticking && !this._ticker) {
+      this._ticker = setInterval(() => this.requestUpdate(), 1000);
+    } else if (!ticking) {
+      this._stopTicker();
+    }
+  }
+
+  private _stopTicker() {
+    clearInterval(this._ticker);
+    this._ticker = undefined;
+  }
+
+  private _off(media: HassEntity): boolean {
+    return MEDIA_OFF_STATES.includes(media.state);
+  }
+
+  private _seekable(media: HassEntity): boolean {
+    return (
+      ((media.attributes.supported_features ?? 0) & SEEK) !== 0 &&
+      Number(media.attributes.media_duration) > 0 &&
+      !this._off(media)
+    );
   }
 
   private get _remoteObj(): HassEntity | undefined {
@@ -286,19 +375,6 @@ export class MoreInfoRemoteControl extends LitElement {
     this._releaseButton();
     const button: NonNullable<typeof this._button> = { spec, fired: false };
     this._button = button;
-    if (spec.repeat) {
-      // Volume: one step now, then steps while held.
-      button.fired = true;
-      this._press(spec.key);
-      this._haptic("light");
-      const repeat = () => {
-        this._press(spec.key, { transient: true });
-        this._haptic("selection");
-        button.timer = setTimeout(repeat, PAD_DEFAULTS.repeatMs);
-      };
-      button.timer = setTimeout(repeat, PAD_DEFAULTS.holdMs);
-      return;
-    }
     const profile = remoteProfile(this.hass!, this.remote!);
     if (!profile.holdable.includes(spec.key)) return;
     button.timer = setTimeout(() => {
@@ -354,6 +430,115 @@ export class MoreInfoRemoteControl extends LitElement {
     `;
   }
 
+  // Volume pill: tap + / −, hold to repeat, or swipe up / down anywhere.
+
+  private _volumeEvent(event: VolumeEvent) {
+    if (event.type === "moving") {
+      this._volumeMoving = event.direction;
+      return;
+    }
+    this._press(`volume_${event.direction}`, {
+      transient: event.source === "repeat",
+    });
+    this._haptic(event.source === "tap" ? "light" : "selection");
+    this._pulseVolume(event.direction);
+  }
+
+  /** The key's icon pops, and a moving pill stretches a bit more, per step. */
+  private _pulseVolume(direction: VolumeDirection) {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+    const pill = this.renderRoot.querySelector<HTMLElement>(".volume");
+    pill
+      ?.querySelector(`.key.${direction} .icon`)
+      ?.animate?.([{ scale: "1" }, { scale: "1.28" }, { scale: "1" }], {
+        duration: 170,
+        easing: "ease-out",
+      });
+    if (this._volumeMoving) {
+      pill?.animate?.(
+        [
+          { scale: `1 ${PILL_STRETCH}` },
+          { scale: `1 ${PILL_BUMP}` },
+          { scale: `1 ${PILL_STRETCH}` },
+        ],
+        { duration: 160, easing: "ease-out" },
+      );
+    }
+  }
+
+  private _volumeDown(ev: PointerEvent) {
+    if (this._disabled || (ev.pointerType === "mouse" && ev.button !== 0)) {
+      return;
+    }
+    capturePointer(ev);
+    const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+    const half = ev.clientY - rect.top < rect.height / 2 ? "up" : "down";
+    this._volume.down(half, ev.clientY);
+    this._volumePressed = half;
+  }
+
+  private _volumeMove(ev: PointerEvent) {
+    if (!this._volume.active) return;
+    this._volume.move(ev.clientY);
+    if (this._volumeMoving) this._volumePressed = undefined;
+  }
+
+  private _volumeUp() {
+    if (!this._volume.active) return;
+    this._volume.up();
+    this._queue.dropTransient();
+    this._volumePressed = undefined;
+  }
+
+  private _volumeCancel() {
+    this._volume.cancel();
+    this._queue.dropTransient();
+    this._volumePressed = undefined;
+  }
+
+  /** Key under the finger before a swipe starts (pressed look). */
+  @state() accessor _volumePressed: VolumeDirection | undefined;
+
+  private _volumePill() {
+    const hass = this.hass!;
+    const moving = this._volumeMoving;
+    const key = (direction: VolumeDirection) => {
+      const label = hass.localize(`ui.card.media_player.volume_${direction}`);
+      return html`
+        <button
+          class=${classMap({
+            key: true,
+            [direction]: true,
+            pressed: this._volumePressed === direction,
+            dim: moving !== null && moving !== direction,
+          })}
+          aria-label=${label}
+          title=${label}
+          .disabled=${this._disabled}
+          @click=${(ev: MouseEvent) =>
+            this._buttonClick(ev, `volume_${direction}`)}
+        >
+          ${icon(direction === "up" ? "plus" : "minus")}
+        </button>
+      `;
+    };
+    return html`
+      <div
+        class=${classMap({ volume: true, [`moving-${moving}`]: moving !== null })}
+        @pointerdown=${this._volumeDown}
+        @pointermove=${this._volumeMove}
+        @pointerup=${this._volumeUp}
+        @pointercancel=${this._volumeCancel}
+        @lostpointercapture=${this._volumeUp}
+        @contextmenu=${(ev: Event) => ev.preventDefault()}
+      >
+        ${key("up")} ${key("down")}
+      </div>
+    `;
+  }
+
   // Media player
 
   private _toggleMute() {
@@ -395,29 +580,141 @@ export class MoreInfoRemoteControl extends LitElement {
     const powerLabel = hass.localize("ui.card.media_player.power");
     return html`
       <div class="now-playing">
-        <div class="art">
-          ${
-            picture
-              ? html`<img src=${picture} alt="" />`
-              : html`<ha-state-icon
-                  .hass=${hass}
-                  .stateObj=${media}
-                ></ha-state-icon>`
-          }
+        <div class="row">
+          <div class="art">
+            ${
+              picture
+                ? html`<img src=${picture} alt="" />`
+                : html`<ha-state-icon
+                    .hass=${hass}
+                    .stateObj=${media}
+                  ></ha-state-icon>`
+            }
+          </div>
+          <div class="info">
+            <div class="title">${title}</div>
+            <div class="secondary">${secondary}</div>
+          </div>
+          <button
+            class="key small"
+            aria-label=${powerLabel}
+            title=${powerLabel}
+            .disabled=${this._disabled}
+            @click=${this._power}
+          >
+            ${icon("power")}
+          </button>
         </div>
-        <div class="info">
-          <div class="title">${title}</div>
-          <div class="secondary">${secondary}</div>
-        </div>
-        <button
-          class="key small"
-          aria-label=${powerLabel}
-          title=${powerLabel}
-          .disabled=${this._disabled}
-          @click=${this._power}
+        ${this._seek(media)}
+      </div>
+    `;
+  }
+
+  // Seek slider
+
+  private get _seekColorCss(): string {
+    const color = this.seekColor || "theme";
+    if (color === "theme") return "var(--primary-color)";
+    if (color === "art") {
+      return this._artRgb
+        ? rgbCss(
+            adjustForTheme(this._artRgb, Boolean(this.hass?.themes?.darkMode)),
+          )
+        : "var(--primary-color)";
+    }
+    return computeCssColor(color);
+  }
+
+  private _seekAt(ev: PointerEvent, duration: number): number {
+    const track = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+    const ratio = (ev.clientX - track.left) / track.width;
+    return Math.min(1, Math.max(0, ratio)) * duration;
+  }
+
+  private _seekTo(media: HassEntity, position: number) {
+    this._haptic("light");
+    this.hass!.callService("media_player", "media_seek", {
+      entity_id: media.entity_id,
+      seek_position: Math.round(position),
+    }).catch(() => this._haptic("failure"));
+  }
+
+  private _seek(media: HassEntity) {
+    if (!this._seekable(media)) return nothing;
+    const duration = Number(media.attributes.media_duration);
+    const position =
+      this._seekDrag ??
+      Math.min(
+        duration,
+        mediaPosition(media.attributes, media.state === "playing", Date.now()),
+      );
+    const long = duration >= 3600;
+    const percent = (position / duration) * 100;
+    const label = this.hass!.localize("ui.card.media_player.track_position");
+    const down = (ev: PointerEvent) => {
+      if (ev.pointerType === "mouse" && ev.button !== 0) return;
+      capturePointer(ev);
+      this._seekDrag = this._seekAt(ev, duration);
+    };
+    const move = (ev: PointerEvent) => {
+      if (this._seekDrag === undefined) return;
+      this._seekDrag = this._seekAt(ev, duration);
+    };
+    const up = () => {
+      if (this._seekDrag === undefined) return;
+      const target = this._seekDrag;
+      this._seekDrag = undefined;
+      this._seekTo(media, target);
+    };
+    const cancel = () => {
+      this._seekDrag = undefined;
+    };
+    const key = (ev: KeyboardEvent) => {
+      const step =
+        ev.key === "ArrowRight" || ev.key === "ArrowUp"
+          ? SEEK_KEY_STEP
+          : ev.key === "ArrowLeft" || ev.key === "ArrowDown"
+            ? -SEEK_KEY_STEP
+            : undefined;
+      if (step === undefined) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      this._seekTo(media, Math.min(duration, Math.max(0, position + step)));
+    };
+    return html`
+      <div
+        class=${classMap({ seek: true, dragging: this._seekDrag !== undefined })}
+        style=${styleMap({ "--seek-color": this._seekColorCss })}
+      >
+        <div
+          class="seek-track"
+          role="slider"
+          tabindex="0"
+          aria-label=${label}
+          aria-valuemin="0"
+          aria-valuemax=${Math.round(duration)}
+          aria-valuenow=${Math.round(position)}
+          aria-valuetext=${formatMediaTime(position, long)}
+          @pointerdown=${down}
+          @pointermove=${move}
+          @pointerup=${up}
+          @pointercancel=${cancel}
+          @lostpointercapture=${up}
+          @keydown=${key}
         >
-          ${icon("power")}
-        </button>
+          <div class="seek-bar"></div>
+          <div
+            class="seek-fill"
+            style=${styleMap({ width: `${percent}%` })}
+          ></div>
+          <div class="seek-thumb" style=${styleMap({ left: `${percent}%` })}>
+            <span class="seek-bubble">${formatMediaTime(position, long)}</span>
+          </div>
+        </div>
+        <div class="seek-times">
+          <span>${formatMediaTime(position, long)}</span>
+          <span>${formatMediaTime(duration, long)}</span>
+        </div>
       </div>
     `;
   }
@@ -479,18 +776,7 @@ export class MoreInfoRemoteControl extends LitElement {
           hass.localize("ui.card.media_player.media_play_pause"),
           "play",
         )}
-        <div class="volume">
-          ${this._remoteButton(
-            { key: "volume_up", repeat: true },
-            "plus",
-            hass.localize("ui.card.media_player.volume_up"),
-          )}
-          ${this._remoteButton(
-            { key: "volume_down", repeat: true },
-            "minus",
-            hass.localize("ui.card.media_player.volume_down"),
-          )}
-        </div>
+        ${this._volumePill()}
         <button
           class=${classMap({ key: true, mute: true, hidden: !canMute, on: muted })}
           aria-label=${muteLabel}
@@ -531,8 +817,8 @@ export class MoreInfoRemoteControl extends LitElement {
     .now-playing {
       align-self: stretch;
       display: flex;
-      align-items: center;
-      gap: var(--ha-space-3, 12px);
+      flex-direction: column;
+      gap: var(--ha-space-1, 4px);
       padding: var(--ha-space-2, 8px);
       border-radius: var(--ha-border-radius-xl, 18px);
       position: relative;
@@ -546,6 +832,11 @@ export class MoreInfoRemoteControl extends LitElement {
       border-radius: inherit;
       background: var(--remote-surface);
       opacity: calc(var(--remote-surface-opacity) * 0.6);
+    }
+    .now-playing .row {
+      display: flex;
+      align-items: center;
+      gap: var(--ha-space-3, 12px);
     }
     .art {
       flex: none;
@@ -579,6 +870,80 @@ export class MoreInfoRemoteControl extends LitElement {
     .secondary {
       color: var(--secondary-text-color);
       font-size: var(--ha-font-size-s, 12px);
+    }
+
+    /* Seek slider: thin track and round thumb like the native media player. */
+    .seek {
+      padding: 0 var(--ha-space-1, 4px);
+    }
+    .seek-track {
+      position: relative;
+      height: 24px;
+      cursor: pointer;
+      outline: none;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .seek-bar,
+    .seek-fill {
+      position: absolute;
+      left: 0;
+      top: 10px;
+      height: 4px;
+      border-radius: 2px;
+    }
+    .seek-bar {
+      right: 0;
+      background: var(--seek-color);
+      opacity: 0.24;
+    }
+    .seek-fill {
+      background: var(--seek-color);
+    }
+    .seek-thumb {
+      position: absolute;
+      top: 4px;
+      width: 16px;
+      height: 16px;
+      margin-left: -8px;
+      border-radius: 50%;
+      background: var(--seek-color);
+      transition: scale 120ms ease-out;
+    }
+    .seek-track:focus-visible .seek-thumb {
+      box-shadow:
+        0 0 0 3px var(--card-background-color, #fff),
+        0 0 0 5px var(--seek-color);
+    }
+    .seek.dragging .seek-thumb {
+      scale: 1.25;
+    }
+    .seek-bubble {
+      position: absolute;
+      bottom: 22px;
+      left: 50%;
+      translate: -50% 0;
+      padding: 2px 8px;
+      border-radius: var(--ha-border-radius-pill, 9999px);
+      background: var(--seek-color);
+      color: var(--text-primary-color, #fff);
+      font-size: var(--ha-font-size-s, 12px);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 120ms ease-out;
+    }
+    .seek.dragging .seek-bubble {
+      opacity: 1;
+    }
+    .seek-times {
+      display: flex;
+      justify-content: space-between;
+      color: var(--secondary-text-color);
+      font-size: var(--ha-font-size-xs, 11px);
+      font-variant-numeric: tabular-nums;
     }
 
     /* Clickpad */
@@ -792,8 +1157,15 @@ export class MoreInfoRemoteControl extends LitElement {
     .mute {
       grid-area: 3 / 1;
     }
-    /* One pill for both volume keys, each half rounded on its own side. */
+    /*
+     * One pill for both volume keys, each half rounded on its own side. A
+     * swipe stretches it toward where the volume goes (elastic).
+     */
     .volume {
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: scale 220ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
       grid-area: 2 / 2 / 4 / 3;
       display: flex;
       flex-direction: column;
@@ -805,6 +1177,35 @@ export class MoreInfoRemoteControl extends LitElement {
     /* Halves of one pill: shrinking one would open a gap. */
     .volume .key:not(:disabled):active {
       scale: none;
+    }
+    /* Pressed look follows the gesture: gone as soon as a swipe starts. */
+    .volume .key:not(:disabled):active::before {
+      opacity: var(--remote-surface-opacity);
+    }
+    .volume .key.pressed::before {
+      opacity: calc(var(--remote-surface-opacity) * 2.5);
+    }
+    .volume .icon {
+      transition: opacity 150ms ease-out;
+    }
+    .volume .key.dim .icon {
+      opacity: 0.35;
+    }
+    .volume.moving-up {
+      transform-origin: bottom;
+      scale: 1 1.06;
+    }
+    .volume.moving-down {
+      transform-origin: top;
+      scale: 1 1.06;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .volume,
+      .volume.moving-up,
+      .volume.moving-down {
+        scale: none;
+        transition: none;
+      }
     }
     .volume .key:first-child {
       border-radius: calc(var(--remote-key-size) / 2)

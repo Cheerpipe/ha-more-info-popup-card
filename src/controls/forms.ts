@@ -105,6 +105,10 @@ export const stateCardForm = () => ({
         { name: "haptics", selector: { boolean: {} } },
       ],
     },
+    {
+      name: "seek_color",
+      selector: select(["theme", "art"], "controls.seek_color", true),
+    },
     APPEARANCE,
   ],
   computeLabel,

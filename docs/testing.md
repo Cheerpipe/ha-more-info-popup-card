@@ -77,6 +77,8 @@ integration):
 | Remote: tap, long press, ring, slow drag, flick, still-after-drag repeat, held volume, held TV, keyboard → `send_command`   | Unit, HA     | `remote.test.ts`; commands recorded by the fake remote                                                                              |
 | Remote: universal media player with `remote: media_player.<apple_tv>`; editor lists remotes and Apple TV media players      | Unit, HA     | `remote.test.ts`; universal over the fake Apple TV in the dev instance                                                              |
 | Remote: mute (`media_player.volume_mute`), editor options, light / dark, phone width                                        | HA           | dev instance                                                                                                                        |
+| Remote: seek slider follows playback, drag → `media_seek`; `seek_color` theme / art / color                                 | Unit, HA     | `seek.test.ts`; fake Apple TV with a local cover, dominant color read from the slider                                               |
+| Remote: volume pill tap, hold, swipe up / down, still-after-swipe repeat, elastic stretch                                   | Unit, HA     | `remote.test.ts`; commands recorded by the fake remote, stretch read from the computed style                                        |
 | Remote on a real Apple TV, haptics in the companion apps                                                                    | Not verified | no Apple TV in the dev instance                                                                                                     |
 
 ## Controls card

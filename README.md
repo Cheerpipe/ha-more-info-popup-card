@@ -194,6 +194,7 @@ show_cancel: true # Cancel button under a running script (trigger, push)
 remote: auto # media players: auto (Apple TV) | none | remote.<id> | media_player.<apple_tv> (for universal players) — adds a Now playing / Remote switch
 remote_view: now_playing # view a media player with a remote opens on: now_playing | remote
 haptics: true # haptic feedback of the remote
+seek_color: theme # seek slider of the remote: theme | art (cover color) | any color
 appearance: plain # plain (like more-info) | card
 ```
 

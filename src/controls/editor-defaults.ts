@@ -43,6 +43,7 @@ const stateCardValues = (
   remote: "auto",
   remote_view: "now_playing",
   haptics: true,
+  seek_color: "theme",
 });
 
 export const STATE_CARD_DEFAULTS: EditorDefaults<StateCardConfig> = {

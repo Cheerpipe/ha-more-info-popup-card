@@ -32,6 +32,7 @@ describe("state card editor defaults", () => {
       remote: "auto",
       remote_view: "now_playing",
       haptics: true,
+      seek_color: "theme",
     });
   });
 

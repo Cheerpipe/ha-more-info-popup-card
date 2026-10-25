@@ -58,6 +58,7 @@ export interface HomeAssistant {
   services: Record<string, Record<string, HassService | undefined>>;
   user?: { id: string; name: string; is_admin: boolean };
   language: string;
+  themes?: { darkMode?: boolean };
   locale: Record<string, unknown>;
   config: { version: string; components: string[] };
   translationMetadata: {

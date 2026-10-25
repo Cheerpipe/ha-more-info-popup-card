@@ -5,6 +5,9 @@ import {
   PAD_DEFAULTS,
   type PadEvent,
   type RemoteCommand,
+  VOLUME_DEFAULTS,
+  type VolumeEvent,
+  VolumeTracker,
 } from "../src/controls/remote-gestures";
 import {
   companionMediaPlayer,
@@ -324,5 +327,70 @@ describe("remote in the state card", () => {
       true,
     );
     expect(remountsStateCard(base, { ...base })).toBe(false);
+  });
+});
+
+describe("VolumeTracker", () => {
+  let events: VolumeEvent[];
+  let pill: VolumeTracker;
+  const steps = () =>
+    events.flatMap((event) =>
+      event.type === "step" ? [`${event.direction}:${event.source}`] : [],
+    );
+  const moving = () =>
+    events.flatMap((event) =>
+      event.type === "moving" ? [event.direction] : [],
+    );
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    events = [];
+    pill = new VolumeTracker((event) => events.push(event));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("taps one step on release", () => {
+    pill.down("up", 30);
+    expect(steps()).toEqual([]);
+    pill.move(33);
+    pill.up();
+    expect(steps()).toEqual(["up:tap"]);
+  });
+
+  it("repeats a held key, without a tap on release", () => {
+    pill.down("down", 110);
+    vi.advanceTimersByTime(VOLUME_DEFAULTS.holdMs + VOLUME_DEFAULTS.repeatMs);
+    pill.up();
+    expect(steps()).toEqual(["down:repeat", "down:repeat"]);
+    expect(moving()).toEqual(["down", null]);
+  });
+
+  it("swipes a step per distance, either way, from any half", () => {
+    pill.down("down", 120);
+    pill.move(100); // past the slop: swiping, measured from here
+    pill.move(80); // one step up
+    pill.move(60); // another
+    pill.move(100); // back down: two steps
+    pill.up();
+    expect(steps()).toEqual([
+      "up:swipe",
+      "up:swipe",
+      "down:swipe",
+      "down:swipe",
+    ]);
+    expect(moving()).toEqual(["up", "down", null]);
+  });
+
+  it("keeps going while the finger stays still after a swipe", () => {
+    pill.down("up", 100);
+    pill.move(85);
+    pill.move(66);
+    vi.advanceTimersByTime(VOLUME_DEFAULTS.holdMs + VOLUME_DEFAULTS.repeatMs);
+    pill.up();
+    vi.advanceTimersByTime(1000);
+    expect(steps()).toEqual(["up:swipe", "up:repeat", "up:repeat"]);
   });
 });

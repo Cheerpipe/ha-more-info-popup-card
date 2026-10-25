@@ -133,6 +133,11 @@ export interface StateCardConfig extends LovelaceCardConfig {
   remote_view?: RemoteView;
   /** Haptic feedback of the remote (default true). */
   haptics?: boolean;
+  /**
+   * Color of the remote's seek slider: `theme` (default), `art` (the
+   * dominant color of the cover) or a theme / CSS color.
+   */
+  seek_color?: string;
 }
 
 type RemoteView = "now_playing" | "remote";
@@ -1227,6 +1232,7 @@ export class MoreInfoStateCard extends LitElement {
       .remote=${remote}
       .mediaPlayer=${mediaPlayer}
       .haptics=${this._config!.haptics !== false}
+      .seekColor=${this._config!.seek_color ?? "theme"}
     ></more-info-popup-remote-control>`;
   }
 

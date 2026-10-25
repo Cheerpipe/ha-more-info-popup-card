@@ -202,6 +202,11 @@ export const es: Record<keyof typeof en, string> = {
   "controls.remote_view.remote": "Remoto",
   "controls.haptics": "Respuesta háptica",
   "controls.haptics_helper": "Vibración de las teclas y gestos del remoto.",
+  "controls.seek_color": "Color del slider de avance",
+  "controls.seek_color_helper":
+    "Vista Remoto: el color del tema, el color dominante de la carátula, o escribe un color.",
+  "controls.seek_color.theme": "Tema",
+  "controls.seek_color.art": "Carátula",
   "controls.options": "Opciones",
   "controls.options_helper": "Opcional: qué opciones mostrar y en qué orden.",
   "controls.value": "Texto secundario",

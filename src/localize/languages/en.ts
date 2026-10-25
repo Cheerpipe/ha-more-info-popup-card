@@ -199,6 +199,11 @@ export const en = {
   "controls.remote_view.remote": "Remote",
   "controls.haptics": "Haptic feedback",
   "controls.haptics_helper": "Vibration of the remote keys and gestures.",
+  "controls.seek_color": "Seek slider color",
+  "controls.seek_color_helper":
+    "Remote view: the theme color, the dominant color of the cover, or type a color.",
+  "controls.seek_color.theme": "Theme",
+  "controls.seek_color.art": "Cover art",
   "controls.options": "Options",
   "controls.options_helper":
     "Optional: which options to show and in which order.",
