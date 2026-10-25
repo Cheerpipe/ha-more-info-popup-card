@@ -10,6 +10,11 @@ dist/*.map
 # database, logs, caches) is generated on first start.
 dev/config/*
 !dev/config/configuration.yaml
+# Stand-in Apple TV (media player + remote) for the state card remote docs.
+!dev/config/custom_components/
+dev/config/custom_components/*
+!dev/config/custom_components/apple_tv/
+__pycache__/
 
 # Dev credentials written by dev/onboard.mjs
 dev/.credentials.json

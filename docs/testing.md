@@ -80,6 +80,7 @@ integration):
 | Remote: seek slider follows playback, drag → `media_seek`; `seek_color` theme / art / color                                 | Unit, HA     | `seek.test.ts`; fake Apple TV with a local cover, dominant color read from the slider                                               |
 | Remote: volume pill tap, hold, swipe up / down, still-after-swipe repeat, elastic stretch                                   | Unit, HA     | `remote.test.ts`; commands recorded by the fake remote, stretch read from the computed style                                        |
 | Remote: `audio_entity` takes the volume pill (tap, swipe) and mute; the remote gets no volume commands                      | HA           | demo media player as the AVR, volume level and mute read back                                                                       |
+| Remote fits the bottom sheet of a phone (375 × 812) without scrolling                                                       | HA, Shot     | [phone](images/state_remote_phone.png)                                                                                              |
 | Remote on a real Apple TV, haptics in the companion apps                                                                    | Not verified | no Apple TV in the dev instance                                                                                                     |
 
 ## Controls card

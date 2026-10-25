@@ -431,6 +431,13 @@ const main = async () => {
     grant_type: "refresh_token",
     refresh_token: credentials.refresh_token,
   });
+  // Stand-in Apple TV of dev/config/custom_components/apple_tv (the state
+  // card remote); aborts when it is already configured.
+  await post(
+    "/api/config/config_entries/flow",
+    { handler: "apple_tv" },
+    access_token,
+  ).catch(() => undefined);
   const conn = await ws(access_token);
   const resources = await conn.call({ type: "lovelace/resources" });
   if (!resources.some((r) => r.url.startsWith(RESOURCE_URL))) {

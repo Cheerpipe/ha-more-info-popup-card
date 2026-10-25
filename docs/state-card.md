@@ -23,9 +23,11 @@
   - [water_heater](#water_heater)
   - [vacuum_status](#vacuum_status)
 - [Remote](#remote)
-  - [Media player with its remote](#media-player-with-its-remote)
-  - [Universal media player over an Apple TV](#universal-media-player-over-an-apple-tv)
+  - [Remote view](#remote-view)
+  - [Now playing view](#now-playing-view)
+  - [On a phone](#on-a-phone)
   - [Remote alone](#remote-alone)
+  - [Universal media player with an AVR](#universal-media-player-with-an-avr)
 - [Options](#options)
   - [Custom state text](#custom-state-text)
   - [Without last changed](#without-last-changed)
@@ -238,38 +240,91 @@ entity: vacuum.demo_vacuum_0_ground_floor
 
 ## Remote
 
-Media players of the Apple TV integration get the remote of their device: a Now playing / Remote switch above the native media player control (`remote: auto`, the default; other media players are unchanged). The Remote view is a round clickpad and the buttons of the Siri Remote: back, TV, play / pause, volume and mute. The ring clicks the arrows (held, they repeat). The center works like the touch surface as far as the integration allows: it only takes key presses, so a drag sends one arrow every few millimeters, a fast flick adds a few more, and a finger that stays still after a drag keeps scrolling that way. A tap is select; a long press holds select (context menu). Holding TV opens Control Center. The volume pill steps with a tap on + or −, repeats while held, and also takes a swipe up or down anywhere on it: a step every few millimeters, then on while the finger stays still, with the pill stretching toward where the volume goes (the remote only steps the volume, so there is no level to show). Commands go through `remote.send_command` one call at a time, merged with `num_repeats` when they come faster than the device answers, and repeats still waiting are dropped when the finger leaves, so the focus stops with it. Above the clickpad, what is playing, the power button and a seek slider (media players that can seek): it follows the playback, shows the target time while dragged and seeks on release, and arrow keys jump 10 s. `seek_color` colors it: `theme` (default), `art` (the dominant color of the cover, kept readable on light and dark themes) or any theme or CSS color; mute uses `media_player.volume_mute` and only shows when the media player supports it. `audio_entity` sends the volume and mute to another media player instead, such as an AVR or sound system driven apart from the TV box (the pill and mute then follow that entity). Keys and gestures give haptic feedback in the companion apps (and vibrate on Android browsers); `haptics: false` turns it off. Arrow keys and Enter drive the focused clickpad.
+Media players of the Apple TV integration get the remote of their device: a **Now playing / Remote** switch above the native media player control. Nothing to configure (`remote: auto`); other media players are unchanged. The Remote view draws the Siri Remote with the shapes and colors of the native controls.
 
-### Media player with its remote
+- **Clickpad.** The ring clicks the arrows (held, they repeat). The center works like the touch surface as far as the integration allows: it only takes key presses, so a drag sends one arrow every few millimeters, a fast flick adds a few more, and a finger that stays still after a drag keeps scrolling that way. A tap is select; a long press holds select (context menu). Arrow keys and Enter drive the focused clickpad.
+- **Buttons.** Back, TV (held: Control Center), play / pause, mute and the volume pill. The pill steps with a tap on + or −, repeats while held, and also takes a swipe up or down anywhere on it: a step every few millimeters, then on while the finger stays still, with the pill stretching toward where the volume goes. Mute uses `media_player.volume_mute` and shows when the media player supports it.
+- **Now playing strip.** Cover, title, power and, for media players that can seek, a seek slider: it follows the playback, shows the target time while dragged and seeks on release (arrow keys jump 10 s). `seek_color` colors it: `theme` (default), `art` (the dominant color of the cover, kept readable on light and dark themes) or any theme or CSS color.
+- **Commands.** They go through `remote.send_command` one call at a time, merged with `num_repeats` when they come faster than the device answers; repeats still waiting are dropped when the finger leaves, so the focus stops with it.
+- **Haptics.** Keys and gestures give haptic feedback in the companion apps (and vibrate in Android browsers); `haptics: false` turns it off.
 
-Nothing to configure for an Apple TV: the switch appears on its own. `remote_view: remote` opens on the remote, `remote: none` hides it, and `remote: remote.<id>` picks another remote entity.
+| Option         | Default       |                                                                                                                                                                                                                    |
+| -------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `remote`       | `auto`        | `auto` finds the remote of the device (Apple TV), `none` hides it, a `remote.*` entity uses that remote, and another media player uses the remote of its device (for `universal`, group or template media players) |
+| `remote_view`  | `now_playing` | View the media player opens on: `now_playing` or `remote`                                                                                                                                                          |
+| `audio_entity` |               | Media player that takes the volume and mute instead of the remote (an AVR or sound system)                                                                                                                         |
+| `seek_color`   | `theme`       | `theme`, `art` or a color                                                                                                                                                                                          |
+| `haptics`      | `true`        | Haptic feedback of keys and gestures                                                                                                                                                                               |
+
+`control: remote` shows the remote alone. The visual editor lists the remotes and Apple TV media players for `remote`. The screenshots use the stand-in Apple TV of the dev instance (`dev/config/custom_components/apple_tv`).
+
+### Remote view
+
+The Remote view of an Apple TV media player, with the seek slider in the color of the cover.
+
+![Remote view](images/state_remote.png)
+
+<sub>Shown inside a popup bound to `media_player.living_room_apple_tv`.</sub>
 
 ```yaml
 type: custom:more-info-state-card
 entity: media_player.living_room_apple_tv
 remote_view: remote
 seek_color: art
-audio_entity: media_player.living_room_receiver
 ```
 
-### Universal media player over an Apple TV
+### Now playing view
 
-Media players with no device of their own (`universal`, groups, templates) don't find the remote on their own: point `remote` at the Apple TV media player, and the remote of its device is used (a `remote.*` entity works too). The visual editor lists the remotes and Apple TV media players.
+Opened on the native media player (the default), with the switch to the remote above it.
+
+![Now playing view](images/state_remote_now_playing.png)
+
+<sub>Shown inside a popup bound to `media_player.living_room_apple_tv`.</sub>
 
 ```yaml
 type: custom:more-info-state-card
-entity: media_player.living_room_tv
-remote: media_player.living_room_apple_tv
+entity: media_player.living_room_apple_tv
+```
+
+### On a phone
+
+The same remote in the bottom sheet of a phone.
+
+![On a phone](images/state_remote_phone.png)
+
+<sub>Shown inside a popup bound to `media_player.living_room_apple_tv`.</sub>
+
+```yaml
+type: custom:more-info-state-card
+entity: media_player.living_room_apple_tv
+remote_view: remote
+seek_color: art
 ```
 
 ### Remote alone
 
-`control: remote` shows only the remote, for the `remote.*` entity or a media player with one; the media player of the same device fills the Now playing strip.
+`control: remote` on the `remote.*` entity (or on a media player with one): only the remote, with the Now playing strip of the media player of the same device.
+
+![Remote alone](images/state_remote_control.png)
+
+<sub>Shown inside a popup bound to `remote.living_room_apple_tv`.</sub>
 
 ```yaml
 type: custom:more-info-state-card
 entity: remote.living_room_apple_tv
 control: remote
+```
+
+### Universal media player with an AVR
+
+A shared setup: a `universal` media player in front of the Apple TV, and an AVR that handles the volume. `remote` points at the Apple TV media player (its device has the remote), and `audio_entity` sends the volume pill and mute to the AVR. The native Now playing view still controls the volume of the card's entity: route it to the AVR in the `universal` config (`commands` and `attributes`).
+
+```yaml
+type: custom:more-info-state-card
+entity: media_player.living_room_tv
+remote: media_player.living_room_apple_tv
+audio_entity: media_player.living_room_receiver
+remote_view: remote
 ```
 
 ## Options

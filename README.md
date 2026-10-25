@@ -178,6 +178,15 @@ option you set is applied on top.
 The state header ("Off · 3 hours ago", "66 %") and the big native control.
 Every control with a screenshot: [docs/state-card.md](docs/state-card.md).
 
+Apple TV media players also get a **remote**: a Now playing / Remote switch over
+the native player, with a Siri Remote clickpad (swipes become arrows, tap is
+select), back / TV / play / mute keys, a volume pill you can tap or swipe, and a
+seek slider that can take the color of the cover. It also works with
+`universal` media players and a separate AVR for the volume:
+[docs/state-card.md#remote](docs/state-card.md#remote).
+
+<img src="docs/images/state_remote.png" alt="Remote view" width="360">
+
 ```yaml
 type: custom:more-info-state-card
 entity: fan.living_room
@@ -297,7 +306,7 @@ cards: []
 | Page                                   | Content                                         |
 | -------------------------------------- | ----------------------------------------------- |
 | [Popup card](docs/popup-card.md)       | 17 examples: basics, sizes, presentation, views |
-| [State card](docs/state-card.md)       | 24 examples: every native control and option    |
+| [State card](docs/state-card.md)       | 26 examples: every native control and option    |
 | [Controls card](docs/controls-card.md) | 18 examples: every chip type and attribute      |
 | [Recipes](docs/recipes.md)             | 8 complete custom more-info popups              |
 | [Visual editor](docs/editor.md)        | The editing workflow                            |
@@ -310,7 +319,7 @@ cards: []
 npm install
 npm run watch          # rebuilds dist/ on change
 npm run dev:ha         # local Home Assistant 2026.10 on http://localhost:8123
-node dev/onboard.mjs   # creates a test user and the "Popup lab" dashboard
+node dev/onboard.mjs   # creates a test user, the "Popup lab" dashboard and a stand-in Apple TV
 node dev/docs.mjs dashboard   # installs the documentation examples ("Popup docs")
 npm run typecheck && npm run lint && npm test
 ```
