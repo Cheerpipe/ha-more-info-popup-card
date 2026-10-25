@@ -825,11 +825,24 @@ var q6=Object.create;var j2=Object.defineProperty;var Y6=Object.getOwnPropertyDe
       flex-direction: column;
       align-items: center;
       align-self: stretch;
-      gap: var(--ha-space-6, 24px);
+      gap: var(--remote-gap);
+      --remote-gap: var(--ha-space-6, 24px);
       --remote-key-size: 64px;
+      --remote-pad-size: 260px;
       --remote-surface: var(--disabled-color);
       --remote-surface-opacity: 0.2;
       -webkit-tap-highlight-color: transparent;
+    }
+    /*
+     * Phones: the whole remote fits in the bottom sheet without scrolling
+     * (the clickpad and keys follow the screen height).
+     */
+    @media (max-height: 900px) {
+      :host {
+        --remote-gap: var(--ha-space-4, 16px);
+        --remote-key-size: clamp(48px, 6.8vh, 64px);
+        --remote-pad-size: clamp(180px, 27vh, 260px);
+      }
     }
     .icon {
       width: 28px;
@@ -978,7 +991,7 @@ var q6=Object.create;var j2=Object.defineProperty;var Y6=Object.getOwnPropertyDe
     .pad {
       position: relative;
       box-sizing: border-box;
-      width: min(100%, 260px);
+      width: min(100%, var(--remote-pad-size));
       aspect-ratio: 1;
       border-radius: 50%;
       cursor: pointer;
