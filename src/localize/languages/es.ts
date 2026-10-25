@@ -194,7 +194,7 @@ export const es: Record<keyof typeof en, string> = {
   "controls.button_layout.circle": "Circular",
   "controls.remote": "Control remoto",
   "controls.remote_helper":
-    "Reproductores: automático busca el control remoto del dispositivo (Apple TV), ninguno lo oculta, o escribe una entidad remote.",
+    "Reproductores: automático busca el control remoto del dispositivo (Apple TV), ninguno lo oculta. Elige un remote, o el reproductor Apple TV cuyo control remoto usar (para reproductores universal o de grupo).",
   "controls.remote.auto": "Automático",
   "controls.remote.none": "Ninguno",
   "controls.remote_view": "El reproductor abre en",

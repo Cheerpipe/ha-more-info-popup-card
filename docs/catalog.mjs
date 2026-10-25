@@ -597,6 +597,14 @@ export const PAGES = [
             }),
           ),
           snippet(
+            "state_remote_universal",
+            "Universal media player over an Apple TV",
+            "Media players with no device of their own (`universal`, groups, templates) don't find the remote on their own: point `remote` at the Apple TV media player, and the remote of its device is used (a `remote.*` entity works too). The visual editor lists the remotes and Apple TV media players.",
+            state("media_player.living_room_tv", {
+              remote: "media_player.living_room_apple_tv",
+            }),
+          ),
+          snippet(
             "state_remote_control",
             "Remote alone",
             "`control: remote` shows only the remote, for the `remote.*` entity or a media player with one; the media player of the same device fills the Now playing strip.",

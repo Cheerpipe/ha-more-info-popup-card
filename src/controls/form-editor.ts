@@ -13,7 +13,8 @@ import type { HomeAssistant, LovelaceCardConfig } from "../ha/types";
 import type { EditorDefaults } from "./editor-defaults";
 
 export interface EditorForm {
-  schema: unknown[];
+  /** A function for options listed from the entities (kept while equal). */
+  schema: unknown[] | ((hass: HomeAssistant | undefined) => unknown[]);
   computeLabel: (schema: { name: string }) => string;
   computeHelper?: (schema: { name: string }) => string | undefined;
   assertConfig?: (config: never) => void;
@@ -31,6 +32,18 @@ export const defineFormEditor = <C extends LovelaceCardConfig>(
 
     private readonly _form = form();
 
+    private _schema?: { key: string; value: unknown[] };
+
+    /** Same schema object while it doesn't change, so `ha-form` keeps it. */
+    private get _currentSchema(): unknown[] {
+      const { schema } = this._form;
+      if (typeof schema !== "function") return schema;
+      const value = schema(this.hass);
+      const key = JSON.stringify(value);
+      if (this._schema?.key !== key) this._schema = { key, value };
+      return this._schema.value;
+    }
+
     /** Throws for configs the form can't edit (HA then offers YAML). */
     public setConfig(config: C): void {
       this._form.assertConfig?.(config as never);
@@ -43,7 +56,7 @@ export const defineFormEditor = <C extends LovelaceCardConfig>(
         <ha-form
           .hass=${this.hass}
           .data=${defaults.fill(this._config, this.hass)}
-          .schema=${this._form.schema}
+          .schema=${this._currentSchema}
           .computeLabel=${this._form.computeLabel}
           .computeHelper=${this._form.computeHelper}
           @value-changed=${this._valueChanged}

@@ -191,7 +191,7 @@ color: purple # active color of the control: theme color name or any CSS color
 color_off: "#9e9e9e" # inactive color
 button_layout: vertical # push only: vertical | horizontal | square | circle
 show_cancel: true # Cancel button under a running script (trigger, push)
-remote: auto # media players: auto (Apple TV) | none | remote.<id> — adds a Now playing / Remote switch
+remote: auto # media players: auto (Apple TV) | none | remote.<id> | media_player.<apple_tv> (for universal players) — adds a Now playing / Remote switch
 remote_view: now_playing # view a media player with a remote opens on: now_playing | remote
 haptics: true # haptic feedback of the remote
 appearance: plain # plain (like more-info) | card
@@ -295,7 +295,7 @@ cards: []
 | Page                                   | Content                                         |
 | -------------------------------------- | ----------------------------------------------- |
 | [Popup card](docs/popup-card.md)       | 17 examples: basics, sizes, presentation, views |
-| [State card](docs/state-card.md)       | 23 examples: every native control and option    |
+| [State card](docs/state-card.md)       | 24 examples: every native control and option    |
 | [Controls card](docs/controls-card.md) | 18 examples: every chip type and attribute      |
 | [Recipes](docs/recipes.md)             | 8 complete custom more-info popups              |
 | [Visual editor](docs/editor.md)        | The editing workflow                            |

@@ -24,6 +24,7 @@
   - [vacuum_status](#vacuum_status)
 - [Remote](#remote)
   - [Media player with its remote](#media-player-with-its-remote)
+  - [Universal media player over an Apple TV](#universal-media-player-over-an-apple-tv)
   - [Remote alone](#remote-alone)
 - [Options](#options)
   - [Custom state text](#custom-state-text)
@@ -247,6 +248,16 @@ Nothing to configure for an Apple TV: the switch appears on its own. `remote_vie
 type: custom:more-info-state-card
 entity: media_player.living_room_apple_tv
 remote_view: remote
+```
+
+### Universal media player over an Apple TV
+
+Media players with no device of their own (`universal`, groups, templates) don't find the remote on their own: point `remote` at the Apple TV media player, and the remote of its device is used (a `remote.*` entity works too). The visual editor lists the remotes and Apple TV media players.
+
+```yaml
+type: custom:more-info-state-card
+entity: media_player.living_room_tv
+remote: media_player.living_room_apple_tv
 ```
 
 ### Remote alone

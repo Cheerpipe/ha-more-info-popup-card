@@ -191,7 +191,7 @@ export const en = {
   "controls.button_layout.circle": "Circle",
   "controls.remote": "Remote",
   "controls.remote_helper":
-    "Media players: auto finds the remote of the device (Apple TV), none hides it, or type a remote entity.",
+    "Media players: automatic finds the remote of the device (Apple TV), none hides it. Pick a remote, or the Apple TV media player whose remote to use (for universal or group media players).",
   "controls.remote.auto": "Automatic",
   "controls.remote.none": "None",
   "controls.remote_view": "Media player opens on",

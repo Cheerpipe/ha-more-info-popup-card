@@ -9,6 +9,7 @@ import {
 import {
   companionMediaPlayer,
   companionRemote,
+  remoteChoices,
   remoteProfile,
   resolveRemote,
 } from "../src/controls/remote-profiles";
@@ -272,6 +273,32 @@ describe("remote profiles", () => {
     expect(resolveRemote(undefined, "media_player.living", "auto")).toBe(
       undefined,
     );
+  });
+
+  it("takes the remote of another media player's device", () => {
+    // A universal media player has no device: point it at the Apple TV.
+    const withUniversal = hass({
+      "media_player.living": { device_id: "atv", platform: "apple_tv" },
+      "remote.living": { device_id: "atv", platform: "apple_tv" },
+      "media_player.tv": { platform: "universal" },
+    });
+    expect(
+      resolveRemote(withUniversal, "media_player.tv", undefined),
+    ).toBeUndefined();
+    expect(
+      resolveRemote(withUniversal, "media_player.tv", "media_player.living"),
+    ).toBe("remote.living");
+    expect(
+      resolveRemote(withUniversal, "media_player.tv", "media_player.tv"),
+    ).toBeUndefined();
+  });
+
+  it("lists remotes and Apple TV media players for the editor", () => {
+    expect(remoteChoices(home)).toEqual([
+      "media_player.living",
+      "remote.living",
+      "remote.other",
+    ]);
   });
 
   it("maps the keys to Apple TV commands", () => {

@@ -5,6 +5,9 @@
  */
 import { localize, type TranslationKey } from "../localize/localize";
 import { ATTRIBUTE_SELECTS } from "./attributes";
+import { computeStateName } from "../ha/entity";
+import type { HomeAssistant } from "../ha/types";
+import { remoteChoices } from "./remote-profiles";
 import { STATE_CONTROLS } from "./state-controls";
 
 const lang = () => undefined;
@@ -31,8 +34,30 @@ const APPEARANCE = {
 const computeLabel = (schema: { name: string }) =>
   label(schema.name) || schema.name;
 
+/**
+ * `remote` option: automatic, none, or one of the remotes and Apple TV media
+ * players (a media player stands for the remote of its device). Typing any
+ * other entity id is allowed.
+ */
+const remoteSelector = (hass: HomeAssistant | undefined) => ({
+  select: {
+    mode: "dropdown",
+    custom_value: true,
+    options: [
+      ...["auto", "none"].map((value) => ({
+        value,
+        label: localize(lang(), `controls.remote.${value}` as TranslationKey),
+      })),
+      ...(hass ? remoteChoices(hass) : []).map((entityId) => ({
+        value: entityId,
+        label: `${computeStateName(hass!.states[entityId]!)} (${entityId})`,
+      })),
+    ],
+  },
+});
+
 export const stateCardForm = () => ({
-  schema: [
+  schema: (hass: HomeAssistant | undefined) => [
     { name: "entity", required: true, selector: { entity: {} } },
     {
       name: "control",
@@ -68,10 +93,7 @@ export const stateCardForm = () => ({
         "controls.button_layout",
       ),
     },
-    {
-      name: "remote",
-      selector: select(["auto", "none"], "controls.remote", true),
-    },
+    { name: "remote", selector: remoteSelector(hass) },
     {
       name: "",
       type: "grid",

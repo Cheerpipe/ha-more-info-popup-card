@@ -94,6 +94,21 @@ export const companionRemote = (
   return sibling(hass, mediaPlayerId, "remote");
 };
 
+/**
+ * Entities the `remote` option can point to, for the editor: every remote,
+ * and the media players of supported integrations that have one.
+ */
+export const remoteChoices = (hass: HomeAssistant): string[] =>
+  Object.keys(hass.states)
+    .filter((entityId) => {
+      const domain = computeDomain(entityId);
+      if (domain === "remote") return true;
+      return (
+        domain === "media_player" && Boolean(companionRemote(hass, entityId))
+      );
+    })
+    .sort();
+
 /** Media player of the device of a remote (now playing, power, mute). */
 export const companionMediaPlayer = (
   hass: HomeAssistant,
@@ -102,8 +117,10 @@ export const companionMediaPlayer = (
 
 /**
  * Remote shown with a media player for its `remote` option: `auto` (the
- * default) finds the remote of supported integrations, `none` hides it, an
- * entity id uses that remote.
+ * default) finds the remote of supported integrations, `none` hides it, a
+ * `remote.*` entity uses that remote, and another media player uses the
+ * remote of its device. The last one is for media players with no device of
+ * their own that front an Apple TV (`universal`, groups, templates).
  */
 export const resolveRemote = (
   hass: HomeAssistant | undefined,
@@ -111,6 +128,10 @@ export const resolveRemote = (
   option: string | undefined,
 ): string | undefined => {
   if (!hass || option === "none") return undefined;
-  if (option && option !== "auto") return option;
+  if (option && option !== "auto") {
+    return computeDomain(option) === "media_player"
+      ? sibling(hass, option, "remote")
+      : option;
+  }
   return companionRemote(hass, mediaPlayerId);
 };
