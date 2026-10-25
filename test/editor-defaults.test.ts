@@ -29,6 +29,9 @@ describe("state card editor defaults", () => {
       show_state: true,
       show_last_changed: true,
       show_cancel: true,
+      remote: "auto",
+      remote_view: "now_playing",
+      haptics: true,
     });
   });
 

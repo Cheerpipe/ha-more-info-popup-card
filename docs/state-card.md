@@ -22,6 +22,9 @@
   - [humidity](#humidity)
   - [water_heater](#water_heater)
   - [vacuum_status](#vacuum_status)
+- [Remote](#remote)
+  - [Media player with its remote](#media-player-with-its-remote)
+  - [Remote alone](#remote-alone)
 - [Options](#options)
   - [Custom state text](#custom-state-text)
   - [Without last changed](#without-last-changed)
@@ -230,6 +233,30 @@ Vacuum illustration (animated while cleaning), the command buttons (start / paus
 ```yaml
 type: custom:more-info-state-card
 entity: vacuum.demo_vacuum_0_ground_floor
+```
+
+## Remote
+
+Media players of the Apple TV integration get the remote of their device: a Now playing / Remote switch above the native media player control (`remote: auto`, the default; other media players are unchanged). The Remote view is a round clickpad and the buttons of the Siri Remote: back, TV, play / pause, volume and mute. The ring clicks the arrows (held, they repeat). The center works like the touch surface as far as the integration allows: it only takes key presses, so a drag sends one arrow every few millimeters, a fast flick adds a few more, and a finger that stays still after a drag keeps scrolling that way. A tap is select; a long press holds select (context menu). Holding TV opens Control Center. Commands go through `remote.send_command` one call at a time, merged with `num_repeats` when they come faster than the device answers, and repeats still waiting are dropped when the finger leaves, so the focus stops with it. Above the clickpad, what is playing and the power button; mute uses `media_player.volume_mute` and only shows when the media player supports it. Keys and gestures give haptic feedback in the companion apps (and vibrate on Android browsers); `haptics: false` turns it off. Arrow keys and Enter drive the focused clickpad.
+
+### Media player with its remote
+
+Nothing to configure for an Apple TV: the switch appears on its own. `remote_view: remote` opens on the remote, `remote: none` hides it, and `remote: remote.<id>` picks another remote entity.
+
+```yaml
+type: custom:more-info-state-card
+entity: media_player.living_room_apple_tv
+remote_view: remote
+```
+
+### Remote alone
+
+`control: remote` shows only the remote, for the `remote.*` entity or a media player with one; the media player of the same device fills the Now playing strip.
+
+```yaml
+type: custom:more-info-state-card
+entity: remote.living_room_apple_tv
+control: remote
 ```
 
 ## Options

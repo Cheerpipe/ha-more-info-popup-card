@@ -73,6 +73,10 @@ integration):
 | Lawn mower: start / pause, stop, dock; battery in the header                                                                | Not verified | no lawn mower or battery sensor in the demo                                                                                         |
 | Pure helpers (cover / valve controls, favorites, position text, lock, colors, battery)                                      | Unit         | `native-helpers.test.ts`                                                                                                            |
 | Interaction: fan speed, vacuum start / return to base                                                                       | HA           | entity state changed                                                                                                                |
+| Remote: Apple TV media player gets the Now playing / Remote switch (`remote: auto`); other media players unchanged          | HA           | dev-only fake `apple_tv` integration (media player + remote on one device) and the demo media players                               |
+| Remote: tap, long press, ring, slow drag, flick, still-after-drag repeat, held volume, held TV, keyboard → `send_command`   | Unit, HA     | `remote.test.ts`; commands recorded by the fake remote                                                                              |
+| Remote: mute (`media_player.volume_mute`), editor options, light / dark, phone width                                        | HA           | dev instance                                                                                                                        |
+| Remote on a real Apple TV, haptics in the companion apps                                                                    | Not verified | no Apple TV in the dev instance                                                                                                     |
 
 ## Controls card
 

@@ -110,6 +110,16 @@ export const STATE_CONTROLS = {
   },
   /** The whole native media player content (cover, transport, volume…). */
   media_player: { tag: "more-info-media_player", load: "media_player" },
+  /**
+   * Clickpad and buttons of the device remote (`remote-control.ts`), for a
+   * `remote.*` entity or a media player with one on its device.
+   */
+  remote: {
+    tag: "more-info-popup-remote-control",
+    load: "media_player",
+    extraTags: ["ha-state-icon"],
+    inline: true,
+  },
   /** Run / cancel buttons, queue, description and fields (`more-info-script`). */
   script: {
     tag: "ha-control-button-group",
@@ -337,12 +347,15 @@ export const defaultShowState = (
   control: StateControlName | undefined,
 ): boolean =>
   !DOMAINS_WITHOUT_STATE_HEADER.includes(computeDomain(entityId)) &&
-  control !== "more_info";
+  control !== "more_info" &&
+  control !== "remote";
 
 /** State card options that change what it loads and mounts. */
 const STATE_CARD_MOUNT_KEYS = [
   "entity",
   "control",
+  "remote",
+  "remote_view",
   "show_state",
   "show_last_changed",
 ] as const;

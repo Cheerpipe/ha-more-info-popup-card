@@ -17,8 +17,10 @@ import {
   mdiMenu,
   mdiPause,
   mdiPlay,
+  mdiPlayCircleOutline,
   mdiPlayPause,
   mdiPower,
+  mdiRemoteTv,
   mdiStop,
   mdiSwapVertical,
   mdiTargetVariant,
@@ -28,6 +30,7 @@ import {
 } from "@mdi/js";
 import { css, html, LitElement, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
+import { classMap } from "lit/directives/class-map.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { computeDomain, computeObjectId, computeStateName } from "../ha/entity";
 import type {
@@ -44,6 +47,9 @@ import type { PushLayout } from "./trigger-control";
 import { stateColorVars } from "../ha/color";
 import { resolveIconPath } from "../ha/icons";
 import "./trigger-control";
+import "./remote-control";
+import { localize } from "../localize/localize";
+import { companionMediaPlayer, resolveRemote } from "./remote-profiles";
 import {
   ALARM_DISARM_STATES,
   blankBeforePercent,
@@ -116,7 +122,20 @@ export interface StateCardConfig extends LovelaceCardConfig {
   /** Active / inactive color of the native control (`ui_color` or CSS). */
   color?: string;
   color_off?: string;
+  /**
+   * Remote of a media player: `auto` (default) finds the remote on the
+   * device of supported integrations (Apple TV), `none` hides it, or a
+   * `remote.*` entity. It adds a Now playing / Remote switch to the media
+   * player control and is the remote of `control: remote`.
+   */
+  remote?: string;
+  /** View the media player opens on when it has a remote. */
+  remote_view?: RemoteView;
+  /** Haptic feedback of the remote (default true). */
+  haptics?: boolean;
 }
+
+type RemoteView = "now_playing" | "remote";
 
 const CONTROL_ATTRIBUTES: Partial<Record<StateControlName, string[]>> = {
   temperature: ["show-secondary", "prevent-interaction-on-scroll"],
@@ -254,6 +273,9 @@ export class MoreInfoStateCard extends LitElement {
 
   @state() accessor _openState: OpenButtonState = "normal";
 
+  /** Now playing or remote, for a media player with a remote. */
+  @state() accessor _remoteView: RemoteView = "now_playing";
+
   private _openTimeout?: ReturnType<typeof setTimeout>;
 
   private _controlElement?: HTMLElement & {
@@ -287,6 +309,7 @@ export class MoreInfoStateCard extends LitElement {
     this._setOpenState("normal");
     this._entry = undefined;
     this._entryLoaded = undefined;
+    this._remoteView = config.remote_view ?? "now_playing";
   }
 
   /** Paths of `icon` / `icon_off` for the toggle (it only takes paths). */
@@ -407,6 +430,7 @@ export class MoreInfoStateCard extends LitElement {
       ></more-info-popup-trigger-control>`;
     }
     if (name === "more_info") return this._moreInfo(stateObj);
+    if (name === "remote") return this._remote(stateObj);
     const domain = computeDomain(stateObj.entity_id);
     if (this._positionComposite(stateObj)) {
       return this._positionControls(stateObj);
@@ -432,6 +456,7 @@ export class MoreInfoStateCard extends LitElement {
     };
     element.stateObj = stateObj;
     element.hass = this.hass;
+    if (name === "media_player") return this._mediaPlayer(stateObj, element);
     const isFan = domain === "fan";
     if (name === "toggle" && (this._iconPaths.on || this._iconPaths.off)) {
       element.iconPathOn = this._iconPaths.on ?? this._iconPaths.off;
@@ -1175,6 +1200,88 @@ export class MoreInfoStateCard extends LitElement {
     );
   }
 
+  /** Remote entity and media player of `control: remote`. */
+  private _remoteEntities(stateObj: HassEntity) {
+    const hass = this.hass!;
+    const entityId = stateObj.entity_id;
+    if (computeDomain(entityId) === "remote") {
+      return {
+        remote: entityId,
+        mediaPlayer: companionMediaPlayer(hass, entityId),
+      };
+    }
+    const option = this._config!.remote;
+    return {
+      remote: resolveRemote(
+        hass,
+        entityId,
+        option === "none" ? "auto" : option,
+      ),
+      mediaPlayer: entityId,
+    };
+  }
+
+  private _remoteControl(remote: string, mediaPlayer: string | undefined) {
+    return html`<more-info-popup-remote-control
+      .hass=${this.hass}
+      .remote=${remote}
+      .mediaPlayer=${mediaPlayer}
+      .haptics=${this._config!.haptics !== false}
+    ></more-info-popup-remote-control>`;
+  }
+
+  private _remote(stateObj: HassEntity) {
+    const { remote, mediaPlayer } = this._remoteEntities(stateObj);
+    if (!remote || !this.hass!.states[remote]) {
+      return html`<ha-alert alert-type="info">
+        ${localize(this.hass, "remote.not_found")}
+      </ha-alert>`;
+    }
+    return this._remoteControl(remote, mediaPlayer);
+  }
+
+  /**
+   * The native media player content, and the remote of its device behind a
+   * Now playing / Remote switch.
+   */
+  private _mediaPlayer(stateObj: HassEntity, element: HTMLElement) {
+    const hass = this.hass!;
+    const remote = resolveRemote(
+      hass,
+      stateObj.entity_id,
+      this._config!.remote,
+    );
+    if (!remote || !hass.states[remote]) return element;
+    const current = this._remoteView;
+    const select = (view: RemoteView) => {
+      if (view === current) return;
+      if (this._config!.haptics !== false) {
+        fireEvent(window, "haptic", "selection");
+      }
+      this._remoteView = view;
+    };
+    return html`
+      <div class="remote-views" role="tablist">
+        ${(["now_playing", "remote"] as const).map(
+          (view) => html`
+            <button
+              role="tab"
+              class=${classMap({ selected: view === current })}
+              aria-selected=${view === current}
+              @click=${() => select(view)}
+            >
+              <ha-svg-icon
+                .path=${view === "remote" ? mdiRemoteTv : mdiPlayCircleOutline}
+              ></ha-svg-icon>
+              ${localize(hass, `remote.view.${view}`)}
+            </button>
+          `,
+        )}
+      </div>
+      ${current === "remote" ? this._remoteControl(remote, stateObj.entity_id) : element}
+    `;
+  }
+
   /** On/off button under the fan speed slider (`more-info-fan.ts`). */
   private _fanPowerButton(stateObj: HassEntity) {
     const toggle = () =>
@@ -1671,6 +1778,59 @@ export class MoreInfoStateCard extends LitElement {
       /* The media player draws its own full-width layout. */
       more-info-media_player {
         align-self: stretch;
+      }
+      /* Now playing / Remote switch of a media player with a remote. */
+      .controls > .remote-views {
+        align-self: stretch;
+        display: flex;
+        gap: 2px;
+        padding: 3px;
+        margin-bottom: var(--ha-space-4);
+        border-radius: var(--ha-border-radius-pill, 9999px);
+        position: relative;
+        isolation: isolate;
+      }
+      .remote-views::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        border-radius: inherit;
+        background: var(--disabled-color);
+        opacity: 0.2;
+      }
+      .remote-views button {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--ha-space-2);
+        height: 36px;
+        padding: 0 var(--ha-space-3);
+        border: none;
+        border-radius: inherit;
+        background: none;
+        color: var(--secondary-text-color);
+        font: inherit;
+        font-size: var(--ha-font-size-m, 14px);
+        font-weight: var(--ha-font-weight-medium, 500);
+        cursor: pointer;
+        outline: none;
+        --mdc-icon-size: 18px;
+        transition:
+          background-color 180ms ease-in-out,
+          color 180ms ease-in-out;
+      }
+      .remote-views button.selected {
+        background: var(
+          --card-background-color,
+          var(--ha-color-surface-default)
+        );
+        color: var(--primary-text-color);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+      }
+      .remote-views button:focus-visible {
+        box-shadow: 0 0 0 2px var(--primary-color);
       }
       /* more-info-script.ts */
       .script {

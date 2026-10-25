@@ -130,6 +130,7 @@ export const en = {
   "controls.control.vacuum_status": "Vacuum status",
   "controls.control.lawn_mower_status": "Lawn mower status",
   "controls.control.media_player": "Media player",
+  "controls.control.remote": "Remote (clickpad and buttons)",
   "controls.control.more_info": "Native more-info content",
   "controls.control.script": "Script (run / cancel)",
   "controls.control.press": "Press button",
@@ -188,6 +189,16 @@ export const en = {
   "controls.button_layout.horizontal": "Horizontal",
   "controls.button_layout.square": "Square",
   "controls.button_layout.circle": "Circle",
+  "controls.remote": "Remote",
+  "controls.remote_helper":
+    "Media players: auto finds the remote of the device (Apple TV), none hides it, or type a remote entity.",
+  "controls.remote.auto": "Automatic",
+  "controls.remote.none": "None",
+  "controls.remote_view": "Media player opens on",
+  "controls.remote_view.now_playing": "Now playing",
+  "controls.remote_view.remote": "Remote",
+  "controls.haptics": "Haptic feedback",
+  "controls.haptics_helper": "Vibration of the remote keys and gestures.",
   "controls.options": "Options",
   "controls.options_helper":
     "Optional: which options to show and in which order.",
@@ -207,4 +218,9 @@ export const en = {
   "controls.wrap": "Wrap on phones",
   "controls.wrap_helper":
     "Chips go to new rows instead of scrolling sideways (Home Assistant scrolls).",
+  "remote.view.now_playing": "Now playing",
+  "remote.view.remote": "Remote",
+  "remote.clickpad": "Clickpad",
+  "remote.home": "TV",
+  "remote.not_found": "No remote found for this entity.",
 } as const;

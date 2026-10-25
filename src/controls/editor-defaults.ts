@@ -40,6 +40,9 @@ const stateCardValues = (
     : {}),
   show_last_changed: true,
   show_cancel: true,
+  remote: "auto",
+  remote_view: "now_playing",
+  haptics: true,
 });
 
 export const STATE_CARD_DEFAULTS: EditorDefaults<StateCardConfig> = {

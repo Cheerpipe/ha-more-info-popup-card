@@ -68,6 +68,21 @@ export const stateCardForm = () => ({
         "controls.button_layout",
       ),
     },
+    {
+      name: "remote",
+      selector: select(["auto", "none"], "controls.remote", true),
+    },
+    {
+      name: "",
+      type: "grid",
+      schema: [
+        {
+          name: "remote_view",
+          selector: select(["now_playing", "remote"], "controls.remote_view"),
+        },
+        { name: "haptics", selector: { boolean: {} } },
+      ],
+    },
     APPEARANCE,
   ],
   computeLabel,
