@@ -1,3 +1,6 @@
+/** Visibility tab of the card editor (`hui-card-visibility-editor.ts`). */
+const VISIBILITY_EDITOR = "hui-card-visibility-editor";
+
 /**
  * Visual editor of the controls card. The items list looks like HA's object
  * selector (`ha-selector-object`), but that selector gives every item the
@@ -33,6 +36,23 @@ export class MoreInfoControlsCardEditor extends LitElement {
 
   /** Item open in its form, or the list. */
   @state() accessor _editing: number | undefined;
+
+  /**
+   * The card editor's own visibility editor (status and conditions) is
+   * defined: items use it; otherwise their conditions are YAML.
+   */
+  @state() accessor _nativeVisibility = Boolean(
+    customElements.get(VISIBILITY_EDITOR),
+  );
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (!this._nativeVisibility) {
+      customElements.whenDefined(VISIBILITY_EDITOR).then(() => {
+        this._nativeVisibility = true;
+      });
+    }
+  }
 
   /** Throws for configs the form can't edit (HA then offers YAML). */
   public setConfig(config: ControlsCardConfig): void {
@@ -196,6 +216,14 @@ export class MoreInfoControlsCardEditor extends LitElement {
     this._setItems(controls);
   }
 
+  /** `hui-card-visibility-editor` answers with the item and its conditions. */
+  private _visibilityChanged(ev: CustomEvent<{ value: ControlItemConfig }>) {
+    ev.stopPropagation();
+    const controls = [...this._filled.controls];
+    controls[this._editing!] = ev.detail.value;
+    this._setItems(controls);
+  }
+
   private _renderItem(index: number) {
     const hass = this.hass!;
     const item = this._filled.controls[index] ?? {};
@@ -213,13 +241,35 @@ export class MoreInfoControlsCardEditor extends LitElement {
       <ha-form
         .hass=${hass}
         .data=${item}
-        .schema=${controlItemSchema(item)}
+        .schema=${controlItemSchema(item, {
+          visibility: !this._nativeVisibility,
+        })}
         .computeLabel=${(schema: { name: string }) =>
           controlItemLabel(schema.name)}
         .computeHelper=${(schema: { name: string }) =>
           controlItemHelper(schema.name)}
         @value-changed=${this._itemChanged}
       ></ha-form>
+      ${
+        this._nativeVisibility
+          ? html`
+              <div class="section">
+                <div class="section-title">
+                  ${localize(hass, "controls.visibility")}
+                </div>
+                <p class="section-helper">
+                  ${localize(hass, "controls.item_visibility_helper")}
+                </p>
+                <hui-card-visibility-editor
+                  .hass=${hass}
+                  .config=${item}
+                  .entityId=${item.entity}
+                  @value-changed=${this._visibilityChanged}
+                ></hui-card-visibility-editor>
+              </div>
+            `
+          : nothing
+      }
     `;
   }
 
@@ -270,6 +320,18 @@ export class MoreInfoControlsCardEditor extends LitElement {
       align-items: center;
       gap: var(--ha-space-1, 4px);
       margin-bottom: var(--ha-space-2, 8px);
+    }
+    .section {
+      margin-top: var(--ha-space-6, 24px);
+    }
+    .section-title {
+      font-size: var(--ha-font-size-l, 16px);
+      font-weight: var(--ha-font-weight-medium, 500);
+    }
+    .section-helper {
+      margin: var(--ha-space-1, 4px) 0 var(--ha-space-3, 12px);
+      color: var(--secondary-text-color);
+      font-size: var(--ha-font-size-s, 12px);
     }
     .header .title {
       font-size: var(--ha-font-size-l, 18px);

@@ -294,10 +294,19 @@ export const controlItemFields = (item: ControlItemConfig): string[] => {
   ];
 };
 
-/** `ha-form` schema of one item, with only the fields of its type. */
-export const controlItemSchema = (item: ControlItemConfig) => {
+/**
+ * `ha-form` schema of one item, with only the fields of its type.
+ * `visibility: false` leaves the conditions to the native editor.
+ */
+export const controlItemSchema = (
+  item: ControlItemConfig,
+  { visibility = true } = {},
+) => {
   const fields = CONTROL_ITEM_FIELDS();
-  return controlItemFields(item).map((name) => {
+  const names = controlItemFields(item).filter(
+    (name) => visibility || name !== "visibility",
+  );
+  return names.map((name) => {
     const spec = fields[name as keyof typeof fields];
     return {
       name,

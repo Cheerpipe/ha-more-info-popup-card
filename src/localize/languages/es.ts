@@ -231,7 +231,9 @@ export const es: Record<keyof typeof en, string> = {
   "controls.step": "Paso",
   "controls.visibility": "Visibilidad",
   "controls.visibility_helper":
-    "Se muestra solo cuando se cumplen estas condiciones: la misma lista que la pestaña Visibilidad de una tarjeta (state, numeric_state, screen, user, time, location, y and / or / not), en YAML.",
+    "Se muestra solo cuando se cumplen estas condiciones: la misma lista que la pestaña Visibilidad de una tarjeta, en YAML.",
+  "controls.item_visibility_helper":
+    "El control se muestra solo cuando se cumplen estas condiciones, igual que una tarjeta con su pestaña Visibilidad.",
   "controls.step_helper": "Reemplaza el paso de la entidad.",
   "controls.item_color_helper":
     "Color del ícono (cualquier color CSS o del tema); en un toggle, solo mientras está encendido.",

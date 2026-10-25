@@ -892,7 +892,7 @@ export const PAGES = [
       },
       {
         title: "Visibility",
-        text: "Each item takes `visibility`: the same conditions as a card's Visibility tab (`state`, `numeric_state`, `screen`, `user`, `time`, `location`, and `and` / `or` / `not`). Home Assistant evaluates them with its own `conditional` card logic, so they update the same way (an entity changes, the screen is resized, the time passes). While the dashboard is edited every item shows, like hidden cards do. A row or the button group left without items is not drawn.",
+        text: "Each item takes `visibility`: the same conditions as a card's Visibility tab (entity state and numeric state, screen, user, time, location, and / or / not, and the other types of your Home Assistant version), edited with the same native editor below each item's form. Home Assistant evaluates them with its own `conditional` card logic, so they update the same way (an entity changes, the screen is resized, the time passes). While the dashboard is edited every item shows, like hidden cards do. A row or the button group left without items is not drawn.",
         examples: [
           snippet(
             "controls_visibility",

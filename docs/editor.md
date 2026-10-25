@@ -67,9 +67,15 @@ An item opens in place, with a back arrow like the rows of the entities card
 editor, and its form only has the fields its type uses: options and a custom
 action for a select; minimum, maximum and step for a number; secondary text,
 tap action and chevron for an action. The value field shows once a custom
-action is set. Every item has the **Visibility** conditions (YAML):
+action is set:
 
 ![Editor: control item](images/editor_control_item.png)
+
+Below the form, every item has the same **Visibility** editor as a card's
+Visibility tab: its current visibility, and the native conditions editor with
+every condition type of your Home Assistant version:
+
+![Editor: control visibility](images/editor_control_visibility.png)
 
 The state card form also follows the config: icons for the toggle, trigger and
 push controls; Cancel for scripts; the push button shape for `push`; the remote

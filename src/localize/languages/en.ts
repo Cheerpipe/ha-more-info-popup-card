@@ -229,7 +229,9 @@ export const en = {
   "controls.step": "Step",
   "controls.visibility": "Visibility",
   "controls.visibility_helper":
-    "Shown only when these conditions are met: the same list as a card's Visibility tab (state, numeric_state, screen, user, time, location, and / or / not), in YAML.",
+    "Shown only when these conditions are met: the same list as a card's Visibility tab, in YAML.",
+  "controls.item_visibility_helper":
+    "The control shows only when these conditions are met, like a card with its Visibility tab.",
   "controls.step_helper": "Replaces the step of the entity.",
   "controls.item_color_helper":
     "Icon color (any CSS color or a theme color); for a toggle, only while it is on.",

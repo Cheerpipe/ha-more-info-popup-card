@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   controlItemFields,
+  controlItemSchema,
   filterSchema,
   stateCardOptions,
 } from "../src/controls/forms";
@@ -165,5 +166,17 @@ describe("controlItemFields", () => {
     expect(
       controlItemFields({ entity: "switch.a", perform_action: "x.y" }),
     ).not.toContain("data_key");
+  });
+});
+
+describe("controlItemSchema", () => {
+  it("leaves visibility to the native editor when it is available", () => {
+    const names = (visibility: boolean) =>
+      controlItemSchema({ entity: "switch.a" }, { visibility }).map(
+        ({ name }) => name,
+      );
+    expect(names(true)).toContain("visibility");
+    expect(names(false)).not.toContain("visibility");
+    expect(names(false)).toContain("entity");
   });
 });
