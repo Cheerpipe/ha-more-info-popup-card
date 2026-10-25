@@ -15,6 +15,10 @@ import { computeStateName } from "../ha/entity";
 import { fireEvent } from "../ha/fire-event";
 import type { HomeAssistant } from "../ha/types";
 import { localize, type TranslationKey } from "../localize/localize";
+import {
+  reuseEqualConditions,
+  type VisibilityCondition,
+} from "../ha/visibility";
 import { CONTROLS_CARD_DEFAULTS } from "./editor-defaults";
 import {
   assertControlsCardConfig,
@@ -44,6 +48,9 @@ export class MoreInfoControlsCardEditor extends LitElement {
   @state() accessor _nativeVisibility = Boolean(
     customElements.get(VISIBILITY_EDITOR),
   );
+
+  /** Conditions last given to the native editor, per item (see below). */
+  private _conditions = new Map<number, VisibilityCondition[] | undefined>();
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -221,7 +228,22 @@ export class MoreInfoControlsCardEditor extends LitElement {
     ev.stopPropagation();
     const controls = [...this._filled.controls];
     controls[this._editing!] = ev.detail.value;
+    this._conditions.set(this._editing!, ev.detail.value.visibility);
     this._setItems(controls);
+  }
+
+  /**
+   * The item for the native visibility editor, with the same condition
+   * objects as last time when the config came back equal but cloned, so
+   * open conditions stay open while they are edited.
+   */
+  private _visibilityConfig(index: number, item: ControlItemConfig) {
+    const visibility = reuseEqualConditions(
+      item.visibility,
+      this._conditions.get(index),
+    );
+    this._conditions.set(index, visibility);
+    return visibility === item.visibility ? item : { ...item, visibility };
   }
 
   private _renderItem(index: number) {
@@ -262,7 +284,7 @@ export class MoreInfoControlsCardEditor extends LitElement {
                 </p>
                 <hui-card-visibility-editor
                   .hass=${hass}
-                  .config=${item}
+                  .config=${this._visibilityConfig(index, item)}
                   .entityId=${item.entity}
                   @value-changed=${this._visibilityChanged}
                 ></hui-card-visibility-editor>

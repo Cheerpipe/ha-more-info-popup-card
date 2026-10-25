@@ -116,3 +116,32 @@ export class VisibilityWatcher {
     this._onChange(visible);
   }
 }
+
+/**
+ * `next` with the condition objects of `previous` wherever they are equal.
+ * The native conditions editor keys its rows (and their expanded state) by
+ * object identity; a config that comes back cloned (the popup editor clones
+ * on every change) would otherwise redraw every condition collapsed.
+ */
+export const reuseEqualConditions = <T>(
+  next: T[] | undefined,
+  previous: T[] | undefined,
+): T[] | undefined => {
+  if (!next || !previous) return next;
+  const pool = previous.map((condition) => ({
+    key: JSON.stringify(condition),
+    condition,
+    used: false,
+  }));
+  const result = next.map((condition) => {
+    const key = JSON.stringify(condition);
+    const match = pool.find((entry) => !entry.used && entry.key === key);
+    if (!match) return condition;
+    match.used = true;
+    return match.condition;
+  });
+  const unchanged =
+    result.length === previous.length &&
+    result.every((condition, index) => condition === previous[index]);
+  return unchanged ? previous : result;
+};

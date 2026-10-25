@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { VisibilityWatcher } from "../src/ha/visibility";
+import { reuseEqualConditions, VisibilityWatcher } from "../src/ha/visibility";
 import type { HomeAssistant } from "../src/ha/types";
 
 /**
@@ -108,5 +108,41 @@ describe("VisibilityWatcher", () => {
     await flush();
     expect(watcher.visible).toBe(true);
     expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+describe("reuseEqualConditions", () => {
+  const a = { condition: "state", entity: "light.a", state: "on" };
+  const b = { condition: "screen", media_query: "(min-width: 768px)" };
+
+  it("gives back the previous objects for an equal, cloned list", () => {
+    const previous = [a, b];
+    expect(reuseEqualConditions(structuredClone(previous), previous)).toBe(
+      previous,
+    );
+  });
+
+  it("keeps the unchanged conditions when one changes", () => {
+    const changed = { ...a, state: "off" };
+    const result = reuseEqualConditions([changed, structuredClone(b)], [a, b])!;
+    expect(result[0]).toBe(changed);
+    expect(result[1]).toBe(b);
+  });
+
+  it("follows reordering and new conditions", () => {
+    const added = { condition: "user", users: ["x"] };
+    const result = reuseEqualConditions(
+      [structuredClone(b), added, structuredClone(a)],
+      [a, b],
+    )!;
+    expect(result).toEqual([b, added, a]);
+    expect(result[0]).toBe(b);
+    expect(result[2]).toBe(a);
+  });
+
+  it("passes through without a previous list", () => {
+    const next = [a];
+    expect(reuseEqualConditions(next, undefined)).toBe(next);
+    expect(reuseEqualConditions(undefined, [a])).toBeUndefined();
   });
 });
