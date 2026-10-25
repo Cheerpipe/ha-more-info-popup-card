@@ -1,6 +1,6 @@
 {
   "name": "more-info-popup-card",
-  "version": "0.13",
+  "version": "0.14",
   "description": "A Home Assistant container card that opens as a native-looking more-info popup with a sections-style grid of cards.",
   "license": "MIT",
   "repository": {
