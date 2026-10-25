@@ -177,6 +177,7 @@ declare global {
   interface Window {
     loadCardHelpers?: () => Promise<{
       importMoreInfoControl?: (type: string) => void;
+      createCardElement?: (config: LovelaceCardConfig) => HTMLElement;
       showEnterCodeDialog?: (
         element: HTMLElement,
         params: {

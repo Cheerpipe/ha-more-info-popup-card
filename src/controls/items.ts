@@ -5,6 +5,7 @@ import { computeDomain } from "../ha/entity";
 import type { ActionConfig, LovelaceCardConfig } from "../ha/types";
 import { NUMBER_DOMAINS, SELECT_DOMAINS, TOGGLE_DOMAINS } from "./attributes";
 import type { CardAppearance } from "./styles";
+import type { VisibilityCondition } from "../ha/visibility";
 
 export type ControlType = "select" | "toggle" | "number" | "action" | "button";
 
@@ -39,6 +40,11 @@ export interface ControlItemConfig {
   tap_action?: ActionConfig;
   /** For `action`: show the chevron (default: for navigate / more-info). */
   show_arrow?: boolean;
+  /**
+   * Shown only when these conditions are met: the same list as a card's
+   * `visibility` (evaluated by Home Assistant, see `ha/visibility.ts`).
+   */
+  visibility?: VisibilityCondition[];
 }
 
 /**

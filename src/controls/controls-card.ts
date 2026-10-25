@@ -19,6 +19,7 @@ import type {
   LovelaceGridOptions,
 } from "../ha/types";
 import { localize } from "../localize/localize";
+import { VisibilityWatcher, type VisibilityCondition } from "../ha/visibility";
 import {
   ATTRIBUTE_SELECTS,
   ENTITY_SELECT,
@@ -77,6 +78,21 @@ export class MoreInfoControlsCard extends LitElement {
 
   @state() accessor _ready = false;
 
+  /** Edit mode (set by `hui-card`): every item shows, like hidden cards. */
+  @property({ attribute: false }) accessor preview = false;
+
+  /** Items whose `visibility` conditions are not met right now. */
+  @state() accessor _hiddenItems: ReadonlySet<number> = new Set();
+
+  /** One watcher per item with `visibility`, keyed by index. */
+  private _watchers = new Map<
+    number,
+    { key: string; watcher: VisibilityWatcher }
+  >();
+
+  /** Hidden home of the watchers' probes (kept out of Lit's template). */
+  private _probes?: HTMLElement;
+
   /** Optimistic values while a number change is pending. */
   @state() accessor _pending: Record<number, number> = {};
 
@@ -106,6 +122,61 @@ export class MoreInfoControlsCard extends LitElement {
       }
     });
     this._config = config;
+    this._syncWatchers();
+  }
+
+  /** Starts, keeps or stops the visibility watcher of each item. */
+  private _syncWatchers() {
+    const wanted = new Map<number, VisibilityCondition[]>();
+    this._config?.controls.forEach((item, index) => {
+      if (Array.isArray(item.visibility) && item.visibility.length) {
+        wanted.set(index, item.visibility);
+      }
+    });
+    for (const [index, { key, watcher }] of this._watchers) {
+      const conditions = wanted.get(index);
+      if (!conditions || JSON.stringify(conditions) !== key) {
+        watcher.stop();
+        this._watchers.delete(index);
+      }
+    }
+    if (!this._probes) {
+      this._probes = document.createElement("div");
+      this._probes.hidden = true;
+    }
+    for (const [index, conditions] of wanted) {
+      if (this._watchers.has(index)) continue;
+      const watcher = new VisibilityWatcher(conditions, this._probes, () =>
+        this._updateHidden(),
+      );
+      watcher.hass = this.hass;
+      this._watchers.set(index, { key: JSON.stringify(conditions), watcher });
+    }
+    this._updateHidden();
+  }
+
+  private _updateHidden() {
+    const hidden = new Set<number>();
+    for (const [index, { watcher }] of this._watchers) {
+      if (!watcher.visible) hidden.add(index);
+    }
+    const same =
+      hidden.size === this._hiddenItems.size &&
+      [...hidden].every((index) => this._hiddenItems.has(index));
+    if (!same) this._hiddenItems = hidden;
+  }
+
+  protected override willUpdate(changed: Map<PropertyKey, unknown>): void {
+    if (changed.has("hass")) {
+      for (const { watcher } of this._watchers.values()) {
+        watcher.hass = this.hass;
+      }
+    }
+  }
+
+  protected override firstUpdated(): void {
+    // Next to Lit's content: the probes must be connected to be evaluated.
+    if (this._probes) this.renderRoot.appendChild(this._probes);
   }
 
   override connectedCallback(): void {
@@ -543,7 +614,9 @@ export class MoreInfoControlsCard extends LitElement {
   protected override render() {
     if (!this._config || !this.hass) return nothing;
     const appearance = this._config.appearance ?? "plain";
-    const items = this._config.controls.map((item, index) => ({ item, index }));
+    const items = this._config.controls
+      .map((item, index) => ({ item, index }))
+      .filter(({ index }) => this.preview || !this._hiddenItems.has(index));
     // Same layout as more-info: command buttons above the chips row.
     const buttons = items.filter(
       ({ item }) => inferControlType(item) === "button",
