@@ -624,6 +624,9 @@ export class MoreInfoControlsCard extends LitElement {
     const chips = items.filter(
       ({ item }) => inferControlType(item) !== "button",
     );
+    // Every item hidden by its conditions: nothing to show (the "add
+    // controls" hint is for a card without items).
+    if (!items.length && this._config.controls.length) return nothing;
     return html`
       <ha-card class=${appearance}>
         ${
