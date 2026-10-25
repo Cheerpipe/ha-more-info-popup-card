@@ -108,6 +108,12 @@ export class MoreInfoRemoteControl extends LitElement {
   /** Media player of the same device: now playing, power and mute. */
   @property({ attribute: false }) accessor mediaPlayer: string | undefined;
 
+  /**
+   * Media player that takes the volume and mute (an AVR or sound system
+   * driven apart from the TV box); unset, the remote and `mediaPlayer` do.
+   */
+  @property({ attribute: false }) accessor audioEntity: string | undefined;
+
   /** Strip with what is playing and the power button. */
   @property({ attribute: false }) accessor showNowPlaying = true;
 
@@ -142,6 +148,12 @@ export class MoreInfoRemoteControl extends LitElement {
     () => this._haptic("failure"),
   );
 
+  /** Volume steps for `audioEntity`, one call at a time like the remote. */
+  private readonly _audioQueue = new CommandQueue(
+    (command) => this._callAudio(command),
+    () => this._haptic("failure"),
+  );
+
   private readonly _tracker = new ClickpadTracker((event) =>
     this._padEvent(event),
   );
@@ -159,6 +171,7 @@ export class MoreInfoRemoteControl extends LitElement {
     this._tracker.cancel();
     this._volume.cancel();
     this._queue.clear();
+    this._audioQueue.clear();
     this._releaseButton();
     clearTimeout(this._flashTimer);
     clearTimeout(this._tapTimer);
@@ -216,6 +229,35 @@ export class MoreInfoRemoteControl extends LitElement {
     return this.remote ? this.hass?.states[this.remote] : undefined;
   }
 
+  private get _audioObj(): HassEntity | undefined {
+    return this.audioEntity ? this.hass?.states[this.audioEntity] : undefined;
+  }
+
+  /** Entity whose volume the pill and mute control. */
+  private get _soundObj(): HassEntity | undefined {
+    return this._audioObj ?? this._mediaObj;
+  }
+
+  /** The volume keys work while their target does. */
+  private get _volumeDisabled(): boolean {
+    const audio = this._audioObj;
+    if (!this.audioEntity) return this._disabled;
+    return !audio || audio.state === "unavailable";
+  }
+
+  private _dropTransient() {
+    this._queue.dropTransient();
+    this._audioQueue.dropTransient();
+  }
+
+  private async _callAudio({ command, repeats }: RemoteCommand) {
+    for (let i = 0; i < repeats; i += 1) {
+      await this.hass!.callService("media_player", command, {
+        entity_id: this.audioEntity,
+      });
+    }
+  }
+
   private get _mediaObj(): HassEntity | undefined {
     return this.mediaPlayer ? this.hass?.states[this.mediaPlayer] : undefined;
   }
@@ -230,7 +272,11 @@ export class MoreInfoRemoteControl extends LitElement {
     fireEvent(window, "haptic", type);
     // The companion apps turn the event into native haptics; browsers only
     // have the vibration API (Android).
-    if (!this.hass?.auth?.external) {
+    // Chrome refuses (and logs) vibrations before the first real tap.
+    const activated =
+      (navigator as { userActivation?: { hasBeenActive: boolean } })
+        .userActivation?.hasBeenActive ?? true;
+    if (!this.hass?.auth?.external && activated) {
       try {
         navigator.vibrate?.(VIBRATION[type]);
       } catch {
@@ -254,6 +300,11 @@ export class MoreInfoRemoteControl extends LitElement {
     key: RemoteKey,
     options: { repeats?: number; hold?: boolean; transient?: boolean } = {},
   ) {
+    if (this.audioEntity && (key === "volume_up" || key === "volume_down")) {
+      if (this._volumeDisabled) return;
+      this._audioQueue.push(key, { ...options, hold: false });
+      return;
+    }
     if (this._disabled) return;
     const profile = remoteProfile(this.hass!, this.remote!);
     const hold = options.hold && profile.holdable.includes(key);
@@ -334,13 +385,13 @@ export class MoreInfoRemoteControl extends LitElement {
   private _padUp(ev: PointerEvent) {
     if (!this._tracker.active) return;
     this._tracker.up(ev.timeStamp);
-    this._queue.dropTransient();
+    this._dropTransient();
     this._touch = undefined;
   }
 
   private _padCancel() {
     this._tracker.cancel();
-    this._queue.dropTransient();
+    this._dropTransient();
     this._touch = undefined;
   }
 
@@ -397,7 +448,7 @@ export class MoreInfoRemoteControl extends LitElement {
   private _releaseButton() {
     if (this._button) clearTimeout(this._button.timer);
     this._button = undefined;
-    this._queue.dropTransient();
+    this._dropTransient();
   }
 
   /** Enter / Space on a focused button (pointer presses are handled above). */
@@ -469,7 +520,10 @@ export class MoreInfoRemoteControl extends LitElement {
   }
 
   private _volumeDown(ev: PointerEvent) {
-    if (this._disabled || (ev.pointerType === "mouse" && ev.button !== 0)) {
+    if (
+      this._volumeDisabled ||
+      (ev.pointerType === "mouse" && ev.button !== 0)
+    ) {
       return;
     }
     capturePointer(ev);
@@ -488,13 +542,13 @@ export class MoreInfoRemoteControl extends LitElement {
   private _volumeUp() {
     if (!this._volume.active) return;
     this._volume.up();
-    this._queue.dropTransient();
+    this._dropTransient();
     this._volumePressed = undefined;
   }
 
   private _volumeCancel() {
     this._volume.cancel();
-    this._queue.dropTransient();
+    this._dropTransient();
     this._volumePressed = undefined;
   }
 
@@ -516,7 +570,7 @@ export class MoreInfoRemoteControl extends LitElement {
           })}
           aria-label=${label}
           title=${label}
-          .disabled=${this._disabled}
+          .disabled=${this._volumeDisabled}
           @click=${(ev: MouseEvent) =>
             this._buttonClick(ev, `volume_${direction}`)}
         >
@@ -542,7 +596,7 @@ export class MoreInfoRemoteControl extends LitElement {
   // Media player
 
   private _toggleMute() {
-    const media = this._mediaObj;
+    const media = this._soundObj;
     if (!media) return;
     this._haptic("light");
     this.hass!.callService("media_player", "volume_mute", {
@@ -723,11 +777,11 @@ export class MoreInfoRemoteControl extends LitElement {
     if (!this.hass || !this.remote) return nothing;
     const hass = this.hass;
     const t = (key: Parameters<typeof localize>[1]) => localize(hass, key);
-    const media = this._mediaObj;
-    const canMute = media
-      ? ((media.attributes.supported_features ?? 0) & VOLUME_MUTE) !== 0
+    const sound = this._soundObj;
+    const canMute = sound
+      ? ((sound.attributes.supported_features ?? 0) & VOLUME_MUTE) !== 0
       : false;
-    const muted = Boolean(media?.attributes.is_volume_muted);
+    const muted = Boolean(sound?.attributes.is_volume_muted);
     const muteLabel = hass.localize("ui.card.media_player.volume_mute");
     return html`
       ${this._nowPlaying()}
@@ -782,7 +836,10 @@ export class MoreInfoRemoteControl extends LitElement {
           aria-label=${muteLabel}
           aria-pressed=${muted}
           title=${muteLabel}
-          .disabled=${this._disabled || !canMute}
+          .disabled=${
+            !canMute ||
+            (this.audioEntity ? this._volumeDisabled : this._disabled)
+          }
           @click=${this._toggleMute}
         >
           ${icon("mute")}

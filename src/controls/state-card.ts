@@ -129,6 +129,11 @@ export interface StateCardConfig extends LovelaceCardConfig {
    * player control and is the remote of `control: remote`.
    */
   remote?: string;
+  /**
+   * Media player that takes the remote's volume and mute: an AVR or sound
+   * system driven apart from the TV box. Unset, the remote sends them.
+   */
+  audio_entity?: string;
   /** View the media player opens on when it has a remote. */
   remote_view?: RemoteView;
   /** Haptic feedback of the remote (default true). */
@@ -1232,6 +1237,7 @@ export class MoreInfoStateCard extends LitElement {
       .remote=${remote}
       .mediaPlayer=${mediaPlayer}
       .haptics=${this._config!.haptics !== false}
+      .audioEntity=${this._config!.audio_entity}
       .seekColor=${this._config!.seek_color ?? "theme"}
     ></more-info-popup-remote-control>`;
   }

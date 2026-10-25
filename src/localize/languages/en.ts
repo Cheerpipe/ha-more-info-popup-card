@@ -194,6 +194,9 @@ export const en = {
     "Media players: automatic finds the remote of the device (Apple TV), none hides it. Pick a remote, or the Apple TV media player whose remote to use (for universal or group media players).",
   "controls.remote.auto": "Automatic",
   "controls.remote.none": "None",
+  "controls.audio_entity": "Audio entity",
+  "controls.audio_entity_helper":
+    "Remote view: media player that takes the volume and mute (an AVR or sound system). Empty: the remote sends them.",
   "controls.remote_view": "Media player opens on",
   "controls.remote_view.now_playing": "Now playing",
   "controls.remote_view.remote": "Remote",

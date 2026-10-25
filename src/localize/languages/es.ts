@@ -197,6 +197,9 @@ export const es: Record<keyof typeof en, string> = {
     "Reproductores: automático busca el control remoto del dispositivo (Apple TV), ninguno lo oculta. Elige un remote, o el reproductor Apple TV cuyo control remoto usar (para reproductores universal o de grupo).",
   "controls.remote.auto": "Automático",
   "controls.remote.none": "Ninguno",
+  "controls.audio_entity": "Entidad de audio",
+  "controls.audio_entity_helper":
+    "Vista Remoto: reproductor que recibe el volumen y el silencio (un AVR o sistema de sonido). Vacío: los envía el control remoto.",
   "controls.remote_view": "El reproductor abre en",
   "controls.remote_view.now_playing": "Reproduciendo",
   "controls.remote_view.remote": "Remoto",

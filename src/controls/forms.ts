@@ -94,6 +94,7 @@ export const stateCardForm = () => ({
       ),
     },
     { name: "remote", selector: remoteSelector(hass) },
+    { name: "audio_entity", selector: { entity: { domain: "media_player" } } },
     {
       name: "",
       type: "grid",
