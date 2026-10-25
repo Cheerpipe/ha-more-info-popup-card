@@ -249,6 +249,10 @@ controls:
       - { value: max, name: Turbo, icon: mdi:fan-speed-3 }
   - entity: switch.child_lock
     color: red # icon color (toggles: only while on)
+    visibility: # same conditions as a card's Visibility tab
+      - condition: state
+        entity: vacuum.robot
+        state: docked
   - entity: number.volume
   - type: action
     name: Cleaning
@@ -307,7 +311,7 @@ cards: []
 | -------------------------------------- | ----------------------------------------------- |
 | [Popup card](docs/popup-card.md)       | 17 examples: basics, sizes, presentation, views |
 | [State card](docs/state-card.md)       | 26 examples: every native control and option    |
-| [Controls card](docs/controls-card.md) | 18 examples: every chip type and attribute      |
+| [Controls card](docs/controls-card.md) | 19 examples: every chip type and attribute      |
 | [Recipes](docs/recipes.md)             | 8 complete custom more-info popups              |
 | [Visual editor](docs/editor.md)        | The editing workflow                            |
 | [UIX theming](docs/uix.md)             | Styling cards and popups                        |

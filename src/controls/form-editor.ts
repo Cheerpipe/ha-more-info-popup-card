@@ -14,7 +14,8 @@ import type { EditorDefaults } from "./editor-defaults";
 
 export interface EditorForm {
   /** A function for options listed from the entities (kept while equal). */
-  schema: unknown[] | ((hass: HomeAssistant | undefined) => unknown[]);
+  schema:
+    unknown[] | ((hass: HomeAssistant | undefined, config: never) => unknown[]);
   computeLabel: (schema: { name: string }) => string;
   computeHelper?: (schema: { name: string }) => string | undefined;
   assertConfig?: (config: never) => void;
@@ -38,7 +39,7 @@ export const defineFormEditor = <C extends LovelaceCardConfig>(
     private get _currentSchema(): unknown[] {
       const { schema } = this._form;
       if (typeof schema !== "function") return schema;
-      const value = schema(this.hass);
+      const value = schema(this.hass, this._config as never);
       const key = JSON.stringify(value);
       if (this._schema?.key !== key) this._schema = { key, value };
       return this._schema.value;

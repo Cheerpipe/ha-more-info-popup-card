@@ -19,6 +19,8 @@
 - [Customizing selects](#customizing-selects)
   - [Filter, order, rename and re-icon](#filter-order-rename-and-re-icon)
   - [Your own options and action](#your-own-options-and-action)
+- [Visibility](#visibility)
+  - [Items with conditions](#items-with-conditions)
 - [Toggle, number, action and button](#toggle-number-action-and-button)
   - [Toggle chips](#toggle-chips)
   - [Number steppers](#number-steppers)
@@ -246,6 +248,32 @@ controls:
         icon: mdi:weather-night
     perform_action: light.turn_on
     data_key: color_name
+```
+
+## Visibility
+
+Each item takes `visibility`: the same conditions as a card's Visibility tab (`state`, `numeric_state`, `screen`, `user`, `time`, `location`, and `and` / `or` / `not`). Home Assistant evaluates them with its own `conditional` card logic, so they update the same way (an entity changes, the screen is resized, the time passes). While the dashboard is edited every item shows, like hidden cards do. A row or the button group left without items is not drawn.
+
+### Items with conditions
+
+The child lock only while the vacuum is docked, and Turbo only on large screens.
+
+```yaml
+type: custom:more-info-controls-card
+controls:
+  - entity: switch.child_lock
+    visibility:
+      - condition: state
+        entity: vacuum.robot
+        state: docked
+  - type: button
+    entity: vacuum.robot
+    name: Turbo
+    icon: mdi:fan-speed-3
+    perform_action: vacuum.set_fan_speed
+    visibility:
+      - condition: screen
+        media_query: "(min-width: 768px)"
 ```
 
 ## Toggle, number, action and button

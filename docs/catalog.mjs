@@ -891,6 +891,39 @@ export const PAGES = [
         ],
       },
       {
+        title: "Visibility",
+        text: "Each item takes `visibility`: the same conditions as a card's Visibility tab (`state`, `numeric_state`, `screen`, `user`, `time`, `location`, and `and` / `or` / `not`). Home Assistant evaluates them with its own `conditional` card logic, so they update the same way (an entity changes, the screen is resized, the time passes). While the dashboard is edited every item shows, like hidden cards do. A row or the button group left without items is not drawn.",
+        examples: [
+          snippet(
+            "controls_visibility",
+            "Items with conditions",
+            "The child lock only while the vacuum is docked, and Turbo only on large screens.",
+            controls([
+              {
+                entity: "switch.child_lock",
+                visibility: [
+                  {
+                    condition: "state",
+                    entity: "vacuum.robot",
+                    state: "docked",
+                  },
+                ],
+              },
+              {
+                type: "button",
+                entity: "vacuum.robot",
+                name: "Turbo",
+                icon: "mdi:fan-speed-3",
+                perform_action: "vacuum.set_fan_speed",
+                visibility: [
+                  { condition: "screen", media_query: "(min-width: 768px)" },
+                ],
+              },
+            ]),
+          ),
+        ],
+      },
+      {
         title: "Toggle, number, action and button",
         examples: [
           inPopup(

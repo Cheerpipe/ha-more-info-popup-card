@@ -58,14 +58,23 @@ Layout tab sizes the card on the popup grid (12 columns, or 24 with
 `column_span: 2`). The toolbar has the code editor toggle, duplicate, copy, cut
 and delete.
 
-The controls card is edited as a native reorderable list:
+The controls card is edited as a native reorderable list. Each row says the
+item's type, its attribute and whether it has visibility conditions:
 
 ![Editor: controls list](images/editor_controls_list.png)
 
-Each item opens a form with its type, entity, attribute, name, icon, options and
-actions:
+An item opens in place, with a back arrow like the rows of the entities card
+editor, and its form only has the fields its type uses: options and a custom
+action for a select; minimum, maximum and step for a number; secondary text,
+tap action and chevron for an action. The value field shows once a custom
+action is set. Every item has the **Visibility** conditions (YAML):
 
 ![Editor: control item](images/editor_control_item.png)
+
+The state card form also follows the config: icons for the toggle, trigger and
+push controls; Cancel for scripts; the push button shape for `push`; the remote
+options for media players (the remote picker on every media player, the rest
+once there is a remote).
 
 > Options with their own names or icons (`{value, name, icon}`) can only be
 > edited in YAML; the form switches to the code editor for them.

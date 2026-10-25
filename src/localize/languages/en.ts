@@ -211,18 +211,29 @@ export const en = {
   "controls.options_helper":
     "Optional: which options to show and in which order.",
   "controls.value": "Secondary text",
-  "controls.value_helper": "For actions; defaults to the entity state.",
+  "controls.value_helper": "Defaults to the entity state.",
   "controls.tap_action": "Tap action",
   "controls.show_arrow": "Show arrow",
+  "controls.show_arrow_helper":
+    "The › chevron of chips that open another view.",
   "controls.perform_action": "Custom action",
   "controls.perform_action_helper":
-    "domain.action that receives the value, e.g. light.turn_on",
+    "domain.action that receives the value instead of the entity's own action, e.g. script.turn_on.",
   "controls.data_key": "Value field",
   "controls.data_key_helper":
-    "Field of the custom action that receives the value, e.g. effect",
+    "Field of the custom action that receives the value, e.g. effect.",
   "controls.min": "Minimum",
+  "controls.min_helper": "Replaces the minimum of the entity.",
   "controls.max": "Maximum",
+  "controls.max_helper": "Replaces the maximum of the entity.",
   "controls.step": "Step",
+  "controls.visibility": "Visibility",
+  "controls.visibility_helper":
+    "Shown only when these conditions are met: the same list as a card's Visibility tab (state, numeric_state, screen, user, time, location, and / or / not), in YAML.",
+  "controls.step_helper": "Replaces the step of the entity.",
+  "controls.item_color_helper":
+    "Icon color (any CSS color or a theme color); for a toggle, only while it is on.",
+  "controls.item_icon_helper": "Replaces the icon of the entity or attribute.",
   "controls.wrap": "Wrap on phones",
   "controls.wrap_helper":
     "Chips go to new rows instead of scrolling sideways (Home Assistant scrolls).",

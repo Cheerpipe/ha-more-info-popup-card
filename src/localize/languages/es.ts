@@ -213,19 +213,30 @@ export const es: Record<keyof typeof en, string> = {
   "controls.options": "Opciones",
   "controls.options_helper": "Opcional: qué opciones mostrar y en qué orden.",
   "controls.value": "Texto secundario",
-  "controls.value_helper":
-    "Para acciones; por defecto, el estado de la entidad.",
+  "controls.value_helper": "Por defecto, el estado de la entidad.",
   "controls.tap_action": "Acción al pulsar",
   "controls.show_arrow": "Mostrar flecha",
+  "controls.show_arrow_helper":
+    "La flecha › de los chips que abren otra vista.",
   "controls.perform_action": "Acción personalizada",
   "controls.perform_action_helper":
-    "dominio.acción que recibe el valor, p. ej. light.turn_on",
+    "domain.action que recibe el valor en lugar de la acción propia de la entidad, p. ej. script.turn_on.",
   "controls.data_key": "Campo del valor",
   "controls.data_key_helper":
-    "Campo de la acción personalizada que recibe el valor, p. ej. effect",
+    "Campo de la acción personalizada que recibe el valor, p. ej. effect.",
   "controls.min": "Mínimo",
+  "controls.min_helper": "Reemplaza el mínimo de la entidad.",
   "controls.max": "Máximo",
+  "controls.max_helper": "Reemplaza el máximo de la entidad.",
   "controls.step": "Paso",
+  "controls.visibility": "Visibilidad",
+  "controls.visibility_helper":
+    "Se muestra solo cuando se cumplen estas condiciones: la misma lista que la pestaña Visibilidad de una tarjeta (state, numeric_state, screen, user, time, location, y and / or / not), en YAML.",
+  "controls.step_helper": "Reemplaza el paso de la entidad.",
+  "controls.item_color_helper":
+    "Color del ícono (cualquier color CSS o del tema); en un toggle, solo mientras está encendido.",
+  "controls.item_icon_helper":
+    "Reemplaza el ícono de la entidad o del atributo.",
   "controls.wrap": "Saltar de línea en móvil",
   "controls.wrap_helper":
     "Los chips bajan de línea en lugar de desplazarse de lado (Home Assistant los desplaza).",
