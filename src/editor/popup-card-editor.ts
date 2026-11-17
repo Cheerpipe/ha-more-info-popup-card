@@ -56,8 +56,10 @@ import {
 } from "../zones";
 import { buildSchema, computeHelper, computeLabel } from "./schema";
 import {
+  CARD_CLIPBOARD_KEY,
   cardPathFromEvent,
   createVirtualLovelace,
+  sectionPath,
   VIRTUAL_VIEW_INDEX,
 } from "./virtual-lovelace";
 
@@ -73,6 +75,37 @@ type SectionElement = HTMLElement & {
   preview?: boolean;
   index?: number;
   viewIndex?: number;
+  /** Home Assistant 2026.11+ (replaces `viewIndex` / `index`). */
+  path?: (string | number)[];
+};
+
+/**
+ * Home Assistant 2026.11 gave `hui-section` a `path` and moved the card
+ * actions (delete, copy, cut, paste) from `hui-section` up to `hui-view`,
+ * which the popup editor is not in: the editor then handles them itself.
+ */
+const sectionUsesPaths = (): boolean => {
+  const ctor = customElements.get("hui-section") as
+    { elementProperties?: Map<PropertyKey, unknown> } | undefined;
+  return ctor?.elementProperties?.has("path") ?? false;
+};
+
+const writeCardClipboard = (card: LovelaceCardConfig) => {
+  try {
+    sessionStorage.setItem(CARD_CLIPBOARD_KEY, JSON.stringify(card));
+  } catch {
+    // Storage unavailable (private mode): copy is best effort.
+  }
+};
+
+const readCardClipboard = (): LovelaceCardConfig | undefined => {
+  try {
+    const value = sessionStorage.getItem(CARD_CLIPBOARD_KEY);
+    const card = value ? (JSON.parse(value) as LovelaceCardConfig) : undefined;
+    return card?.type ? card : undefined;
+  } catch {
+    return undefined;
+  }
 };
 
 type CardElementEditor = HTMLElement & {
@@ -278,6 +311,7 @@ export class MoreInfoPopupCardEditor extends LitElement {
       const section = this._sections.get(zone.id)!;
       section.viewIndex = VIRTUAL_VIEW_INDEX;
       section.index = i;
+      section.path = sectionPath(i);
       section.preview = true;
       section.lovelace = lovelace;
       section.config = sectionConfigs[i];
@@ -314,8 +348,67 @@ export class MoreInfoPopupCardEditor extends LitElement {
     },
   };
 
+  /**
+   * Card actions that `hui-section` no longer handles since 2026.11 (they
+   * moved to `hui-view`). Before that, the native handlers run.
+   */
+  private _interceptCardAction = {
+    capture: true,
+    handleEvent: (ev: CustomEvent<{ path?: unknown }>) => {
+      if (!sectionUsesPaths()) return;
+      const path = cardPathFromEvent(ev.detail?.path);
+      const zone = path && this._zoneAt(path.section);
+      if (!path || !zone) return;
+      ev.stopPropagation();
+      const card = this._cards(zone)[path.card];
+      switch (ev.type) {
+        case "ll-delete-card":
+          this._removeCard(zone, path.card);
+          break;
+        case "ll-copy-card":
+          if (card) writeCardClipboard(card);
+          break;
+        case "ll-cut-card":
+          if (card) writeCardClipboard(card);
+          this._removeCard(zone, path.card, false);
+          break;
+        case "ll-paste-card": {
+          const pasted = readCardClipboard();
+          if (!pasted) break;
+          const cards = [...this._cards(zone)];
+          cards.splice(path.card + 1, 0, pasted);
+          this._setCards({ [zone]: cards });
+          break;
+        }
+        default:
+          break;
+      }
+    },
+  };
+
+  /** Removes a card from the grid, with an undo notice. */
+  private _removeCard(zone: ZoneId, index: number, notify = true) {
+    const cards = [...this._cards(zone)];
+    if (!cards[index]) return;
+    cards.splice(index, 1);
+    this._setCards({ [zone]: cards });
+    if (!notify) return;
+    this._toast({
+      message: localize(this.hass, "editor.card_deleted"),
+      action: {
+        text: localize(this.hass, "editor.undo"),
+        action: this._undoLast,
+      },
+    });
+  }
+
   /** Forwards copy to the native handler so HA's clipboard cache is updated. */
   private _copyNative(zone: ZoneId, index: number) {
+    if (sectionUsesPaths()) {
+      const card = this._cards(zone)[index];
+      if (card) writeCardClipboard(card);
+      return;
+    }
     const section = this._sections.get(zone);
     const target = section?.firstElementChild ?? section;
     if (!target) return;
@@ -564,6 +657,10 @@ export class MoreInfoPopupCardEditor extends LitElement {
         @ll-edit-card=${this._interceptEdit}
         @ll-duplicate-card=${this._interceptEdit}
         @ll-create-card=${this._interceptCreate}
+        @ll-delete-card=${this._interceptCardAction}
+        @ll-copy-card=${this._interceptCardAction}
+        @ll-cut-card=${this._interceptCardAction}
+        @ll-paste-card=${this._interceptCardAction}
       >
         ${this._sections.get(zone)}
       </div>

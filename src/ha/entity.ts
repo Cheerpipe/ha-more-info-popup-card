@@ -101,6 +101,22 @@ export const getDeviceId = (
   entityId: string,
 ): string | null => hass.entities[entityId]?.device_id ?? null;
 
+/**
+ * "Device info" / "Service info" menu label. Home Assistant 2026.11 replaced
+ * `device_or_service_info` + `device_type.*` with `device_info` /
+ * `service_info`; the old keys are kept for 2026.10.
+ */
+export const deviceInfoLabel = (
+  hass: HomeAssistant,
+  deviceType: "device" | "service",
+): string =>
+  hass.localize(`ui.dialogs.more_info_control.${deviceType}_info`) ||
+  hass.localize("ui.dialogs.more_info_control.device_or_service_info", {
+    type: hass.localize(
+      `ui.dialogs.more_info_control.device_type.${deviceType}`,
+    ),
+  });
+
 export const getDeviceType = (
   hass: HomeAssistant,
   deviceId: string | null,
