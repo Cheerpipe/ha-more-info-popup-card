@@ -39,11 +39,15 @@ import type { PopupDialogParams } from "./popup-dialog";
 import { computeHeaderInfo, renderTitle } from "./popup-header";
 import { getRegistry, type OpenOptions, type PopupHost } from "./registry";
 import { bindEntity, matchingEntities } from "./match";
+import { preloadPopup, preloadPopupWithin } from "./preload";
 import "./editor/popup-card-editor";
 import { CONTROLS_CARD_TYPE } from "./controls/controls-card";
 import { STATE_CARD_TYPE } from "./controls/state-card";
 
 declare const __VERSION__: string;
+
+/** Longest wait for the popup's cards to load before it opens anyway (ms). */
+const OPEN_PRELOAD_TIMEOUT = 1000;
 
 type Surface = "hidden" | "placeholder" | "preview";
 
@@ -120,7 +124,7 @@ export class MoreInfoPopupCard
   public openPopup(options?: OpenOptions): void {
     if (!this._config) return;
     const config = bindEntity(this._config, options?.entity);
-    ensureDialogElements().then((missing) => {
+    ensureDialogElements().then(async (missing) => {
       if (
         missing.includes("ha-adaptive-dialog") ||
         missing.includes("hui-section")
@@ -130,6 +134,9 @@ export class MoreInfoPopupCard
         });
         return;
       }
+      // Cards whose chunks are still loading draw empty: the popup would open
+      // short and then grow. Usually already preloaded (`_schedulePreload`).
+      await preloadPopupWithin(config, this.hass, OPEN_PRELOAD_TIMEOUT);
       fireEvent(this, "show-dialog", {
         dialogTag: DIALOG_TAG,
         dialogImport: () => Promise.resolve(),
@@ -181,6 +188,34 @@ export class MoreInfoPopupCard
   protected override willUpdate(changed: PropertyValues<this>): void {
     if (changed.has("hass") && this._previewZones) {
       this._previewZones.hass = this.hass;
+    }
+    if (changed.has("hass") || changed.has("_config")) this._schedulePreload();
+  }
+
+  private _preloaded?: ResolvedPopupConfig;
+
+  /**
+   * Loads the chunks of the popup's cards while the dashboard is idle, so
+   * the first open does not wait for them.
+   */
+  private _schedulePreload() {
+    const template = this._config;
+    if (!template || !this.hass || this._preloaded === template) return;
+    this._preloaded = template;
+    const run = () => {
+      const hass = this.hass;
+      if (!hass || this._config !== template) return;
+      // A template popup preloads with its first matching entity.
+      const config = bindEntity(
+        template,
+        template.entity ?? matchingEntities(template, hass)[0],
+      );
+      preloadPopup(config, hass);
+    };
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(run, { timeout: 5000 });
+    } else {
+      setTimeout(run, 1000);
     }
   }
 

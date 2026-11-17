@@ -350,6 +350,44 @@ export const defaultShowState = (
   control !== "more_info" &&
   control !== "remote";
 
+/** A native more-info chunk: the domain to import and the tags it defines. */
+export type MoreInfoLoad = readonly [domain: string, tags: readonly string[]];
+
+/**
+ * The native chunks a state card waits for before it draws anything. Also
+ * used to preload them before a popup opens, so it opens at its final size.
+ */
+export const stateCardLoads = (
+  config: Pick<
+    StateCardConfig,
+    "entity" | "control" | "show_state" | "show_last_changed"
+  >,
+  stateObj: HassEntity | undefined,
+): MoreInfoLoad[] => {
+  const control = resolveStateControl(config.control, stateObj);
+  const spec: StateControlSpec | undefined = control
+    ? STATE_CONTROLS[control]
+    : undefined;
+  const showState =
+    config.show_state ?? defaultShowState(config.entity, control);
+  const domain = computeDomain(config.entity);
+  const loads: MoreInfoLoad[] = [];
+  if (spec) {
+    loads.push([spec.load || domain, [spec.tag, ...(spec.extraTags ?? [])]]);
+    // The light button bar and pickers only come with the light more-info,
+    // also for on/off lights shown with the generic toggle. Same for the
+    // other parts each domain's more-info draws around its control.
+    const domainTags = domain === "light" ? LIGHT_TAGS : DOMAIN_TAGS[domain];
+    if (domainTags) loads.push([domain, domainTags]);
+  }
+  // Climate, humidifier and water heater controls don't import the header:
+  // load it from a domain whose more-info has one.
+  if (showState && config.show_last_changed !== false) {
+    loads.push(["switch", ["ha-more-info-state-header"]]);
+  }
+  return loads;
+};
+
 /** State card options that change what it loads and mounts. */
 const STATE_CARD_MOUNT_KEYS = [
   "entity",

@@ -38,7 +38,8 @@ import {
   type ControlItemConfig,
   type ControlsCardConfig,
 } from "./items";
-import { ensureMoreInfoElements } from "./loader";
+import { CONTROLS_CARD_LOAD, ensureMoreInfoElements } from "./loader";
+import { isDefined } from "../ha/internals";
 import { CONTROLS_CARD_EDITOR_TAG } from "./editors";
 import { cardAppearanceStyles, chipStyles } from "./styles";
 
@@ -181,11 +182,13 @@ export class MoreInfoControlsCard extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // The chips container and select menu come with the light more-info chunk.
-    ensureMoreInfoElements("light", [
-      "ha-more-info-control-select-container",
-      "ha-control-select-menu",
-    ]).then(() => {
+    // Usually preloaded by the popup: draw in the first update.
+    const [domain, tags] = CONTROLS_CARD_LOAD;
+    if (tags.every(isDefined)) {
+      this._ready = true;
+      return;
+    }
+    ensureMoreInfoElements(domain, [...tags]).then(() => {
       this._ready = true;
     });
   }

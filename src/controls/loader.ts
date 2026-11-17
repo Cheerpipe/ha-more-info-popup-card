@@ -20,3 +20,9 @@ export const ensureMoreInfoElements = async (
   const results = await Promise.all(tags.map((tag) => whenDefined(tag, 8000)));
   return results.every(Boolean);
 };
+
+/** The chips container and select menu of the controls card (light chunk). */
+export const CONTROLS_CARD_LOAD = [
+  "light",
+  ["ha-more-info-control-select-container", "ha-control-select-menu"],
+] as const;

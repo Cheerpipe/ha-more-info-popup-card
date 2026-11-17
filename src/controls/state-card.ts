@@ -41,7 +41,7 @@ import type {
   LovelaceGridOptions,
 } from "../ha/types";
 import { fireEvent } from "../ha/fire-event";
-import { runNativeMethod } from "../ha/internals";
+import { isDefined, runNativeMethod } from "../ha/internals";
 import { ensureMoreInfoElements } from "./loader";
 import type { PushLayout } from "./trigger-control";
 import { stateColorVars } from "../ha/color";
@@ -74,8 +74,6 @@ import {
 } from "./native-helpers";
 import {
   autoStateControl,
-  DOMAIN_TAGS,
-  LIGHT_TAGS,
   showsStateRow,
   defaultShowState,
   resolveStateControl,
@@ -85,6 +83,7 @@ import {
   lightSupportsWhite,
   remountsStateCard,
   STATE_CONTROLS,
+  stateCardLoads,
   supports,
   type StateControlName,
 } from "./state-controls";
@@ -382,36 +381,18 @@ export class MoreInfoStateCard extends LitElement {
 
   protected override willUpdate(): void {
     if (this._ready || !this._config || !this._stateObj) return;
-    const control = this._controlName;
-    const spec = control ? STATE_CONTROLS[control] : undefined;
-    const needsHeader =
-      this._showState && this._config.show_last_changed !== false;
-    const key = `${this._config.entity}:${control}:${needsHeader}`;
+    const loads = stateCardLoads(this._config, this._stateObj);
+    const key = `${this._config.entity}:${JSON.stringify(loads)}`;
     if (key === this._loadingKey) return;
     this._loadingKey = key;
-    const loads: Promise<boolean>[] = [];
-    if (spec) {
-      const extra: readonly string[] =
-        "extraTags" in spec ? spec.extraTags : [];
-      const domain = spec.load || computeDomain(this._config.entity);
-      loads.push(ensureMoreInfoElements(domain, [spec.tag, ...extra]));
+    // Usually preloaded by the popup: draw in this same update.
+    if (loads.every(([, tags]) => tags.every(isDefined))) {
+      this._ready = true;
+      return;
     }
-    // The light button bar and pickers only come with the light more-info,
-    // also for on/off lights shown with the generic toggle. Same for the
-    // other parts each domain's more-info draws around its control.
-    const domain = computeDomain(this._config.entity);
-    const domainTags = domain === "light" ? LIGHT_TAGS : DOMAIN_TAGS[domain];
-    if (spec && domainTags) {
-      loads.push(ensureMoreInfoElements(domain, [...domainTags]));
-    }
-    // Climate, humidifier and water heater controls don't import the header:
-    // load it from a domain whose more-info has one.
-    if (needsHeader) {
-      loads.push(
-        ensureMoreInfoElements("switch", ["ha-more-info-state-header"]),
-      );
-    }
-    Promise.all(loads).then(() => {
+    Promise.all(
+      loads.map(([domain, tags]) => ensureMoreInfoElements(domain, [...tags])),
+    ).then(() => {
       if (this._loadingKey === key) this._ready = true;
     });
   }
