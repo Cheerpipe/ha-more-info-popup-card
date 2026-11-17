@@ -77,8 +77,33 @@ const loadCard = (
     const [domain, tags] = CONTROLS_CARD_LOAD;
     return [ensureMoreInfoElements(domain, [...tags])];
   }
-  // Another custom card: its resource may still be loading.
-  return [whenDefined(tag)];
+  // Another custom card: its resource may still be loading. A card can
+  // also load what it draws with ahead of time (WLED card).
+  return [
+    whenDefined(tag).then(
+      (defined) => defined && preloadCustom(tag, card, hass),
+    ),
+  ];
+};
+
+type PreloadableCard = CustomElementConstructor & {
+  preload?: (config: LovelaceCardConfig, hass: HomeAssistant) => unknown;
+};
+
+/** Optional `static preload(config, hass)` of a custom card. */
+const preloadCustom = async (
+  tag: string,
+  card: LovelaceCardConfig,
+  hass: HomeAssistant,
+): Promise<boolean> => {
+  const cls = customElements.get(tag) as PreloadableCard | undefined;
+  if (typeof cls?.preload !== "function") return true;
+  try {
+    await cls.preload(card, hass);
+  } catch {
+    // The card loads it again when drawn.
+  }
+  return true;
 };
 
 /** Resolves once every card of the popup can draw (never rejects). */
