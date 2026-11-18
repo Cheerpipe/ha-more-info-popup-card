@@ -34,6 +34,7 @@ import { haNavigate } from "./ha/actions";
 import {
   computeDomain,
   computeEditPath,
+  deviceInfoLabel,
   getDeviceId,
   getDeviceType,
   isAdmin,
@@ -839,14 +840,7 @@ export class MoreInfoPopupDialog extends LitElement {
                     slot="icon"
                     .path=${deviceType === "service" ? mdiTransitConnectionVariant : mdiDevices}
                   ></ha-svg-icon>
-                  ${hass.localize(
-                    "ui.dialogs.more_info_control.device_or_service_info",
-                    {
-                      type: hass.localize(
-                        `ui.dialogs.more_info_control.device_type.${deviceType}`,
-                      ),
-                    },
-                  )}
+                  ${deviceInfoLabel(hass, deviceType)}
                 </ha-dropdown-item>
               `
             : nothing

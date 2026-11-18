@@ -362,7 +362,7 @@ if (!customElements.get(CARD_TAG)) {
     name: localize(undefined, "card.name"),
     description: localize(undefined, "card.description"),
     preview: false,
-    documentationURL: "https://github.com/cheerpipe/more-info-popup-card",
+    documentationURL: "https://github.com/Cheerpipe/ha-more-info-popup-card",
   });
   window.customCards.push(
     {
@@ -370,14 +370,14 @@ if (!customElements.get(CARD_TAG)) {
       name: localize(undefined, "state_card.name"),
       description: localize(undefined, "state_card.description"),
       preview: true,
-      documentationURL: "https://github.com/cheerpipe/more-info-popup-card",
+      documentationURL: "https://github.com/Cheerpipe/ha-more-info-popup-card",
     },
     {
       type: CONTROLS_CARD_TYPE,
       name: localize(undefined, "controls_card.name"),
       description: localize(undefined, "controls_card.description"),
       preview: true,
-      documentationURL: "https://github.com/cheerpipe/more-info-popup-card",
+      documentationURL: "https://github.com/Cheerpipe/ha-more-info-popup-card",
     },
   );
   console.info(

@@ -2,9 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import {
   cardPathFromEvent,
   createVirtualLovelace,
+  sectionPath,
 } from "../src/editor/virtual-lovelace";
 import { decodeHash } from "../src/history";
-import { computeEntityNameList } from "../src/ha/entity";
+import { computeEntityNameList, deviceInfoLabel } from "../src/ha/entity";
 import { isSupportedHaVersion, parseHaVersion } from "../src/ha/internals";
 import type { HomeAssistant } from "../src/ha/types";
 
@@ -41,6 +42,17 @@ describe("virtual lovelace", () => {
     expect(cardPathFromEvent([0, 2, 3])).toEqual({ section: 2, card: 3 });
     expect(cardPathFromEvent([0, 3])).toBeUndefined();
     expect(cardPathFromEvent("x")).toBeUndefined();
+  });
+
+  it("reads the string paths of Home Assistant 2026.11+", () => {
+    expect(cardPathFromEvent(["views", 0, "sections", 2, "cards", 3])).toEqual({
+      section: 2,
+      card: 3,
+    });
+    expect(cardPathFromEvent(["views", 0, "sections", 2, "cards"])).toBe(
+      undefined,
+    );
+    expect(sectionPath(1)).toEqual(["views", 0, "sections", 1]);
   });
 });
 
@@ -106,5 +118,30 @@ describe("computeEntityNameList", () => {
     expect(computeEntityNameList(hass({}), "light.ceiling")).toEqual([
       "Living Lamp Ceiling",
     ]);
+  });
+});
+
+describe("device info label", () => {
+  const hassWith = (strings: Record<string, string>) =>
+    ({
+      localize: (key: string, values?: Record<string, unknown>) =>
+        (strings[key] ?? "").replace("{type}", String(values?.type ?? "")),
+    }) as unknown as HomeAssistant;
+
+  it("uses the 2026.11 keys", () => {
+    const hass = hassWith({
+      "ui.dialogs.more_info_control.device_info": "Device info",
+      "ui.dialogs.more_info_control.service_info": "Service info",
+    });
+    expect(deviceInfoLabel(hass, "device")).toBe("Device info");
+    expect(deviceInfoLabel(hass, "service")).toBe("Service info");
+  });
+
+  it("falls back to the 2026.10 keys", () => {
+    const hass = hassWith({
+      "ui.dialogs.more_info_control.device_or_service_info": "{type} info",
+      "ui.dialogs.more_info_control.device_type.service": "Service",
+    });
+    expect(deviceInfoLabel(hass, "service")).toBe("Service info");
   });
 });
