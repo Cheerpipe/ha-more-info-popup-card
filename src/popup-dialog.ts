@@ -840,6 +840,9 @@ export class MoreInfoPopupDialog extends LitElement {
                     .path=${deviceType === "service" ? mdiTransitConnectionVariant : mdiDevices}
                   ></ha-svg-icon>
                   ${hass.localize(
+                    `ui.dialogs.more_info_control.${deviceType}_info`,
+                  ) ||
+                  hass.localize(
                     "ui.dialogs.more_info_control.device_or_service_info",
                     {
                       type: hass.localize(
